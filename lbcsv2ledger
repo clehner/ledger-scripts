@@ -1,0 +1,42 @@
+#!/usr/bin/awk -f
+
+BEGIN {
+    FS=",";
+}
+{
+    created_at=$1
+    buyer=$2
+    seller=$3
+    trade_type=$4
+    btc_amount=$5
+    fee_btc=$6
+    btc_amount_less_fee=$7
+    fiat_amount=$8
+    fiat_fee=$9
+    fiat_per_btc=$10
+    currency=$11
+    transaction_released_at=$12
+
+    i = index(transaction_released_at, " ")-1;
+    released_date = substr(transaction_released_at, 0, i);
+    gsub("-", "/", released_date);
+
+    # As of 2013-12-18, localbitcoins csv does not include the fee.
+    # Calculate it here.
+    # For newer transactions, it seems to be included in the btc_amount
+    #fee_btc = btc_amount/100
+    fee_btc = btc_amount/101
+
+    if (trade_type == "LOCAL_SELL") {
+        printf "%s (#) %s\n", released_date, buyer;
+        printf "\tAssets:Bitcoin:localbitcoins        -%s BTC\n", btc_amount;
+        printf "\tExpenses:Broker:localbitcoins        %s BTC\n", fee_btc;
+        printf "\tAssets:Cash                         $%s\n", fiat_amount;
+    } else {
+        printf "%s (#) %s\n", released_date, seller;
+        printf "\tAssets:Bitcoin:localbitcoins         %s BTC\n", btc_amount;
+        printf "\tExpenses:Broker:localbitcoins        %s BTC\n", fee_btc;
+        printf "\tAssets:Cash                         -$%s\n", fiat_amount;
+    }
+    print "";
+}

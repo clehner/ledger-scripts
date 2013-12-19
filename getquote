@@ -1,0 +1,115 @@
+#!/usr/bin/perl
+#
+# getquote
+#
+# Get quotes for various markets with a focus on cryptocurrencies
+#
+# Markets:
+#
+# BitcoinAverage (BTC/USD)
+# Coinabul (Gold, Silver)
+# Cryptsy (altcoins)
+# Havelock Investments
+# Cryptostocks
+# NASDAQ
+#
+
+use strict;
+
+use Finance::Quote;
+use HTTP::Request;
+use LWP::UserAgent;
+use JSON;
+
+my $timeout = 60;
+
+my $symbol = $ARGV[0];
+my $price;
+
+if (!$symbol) {
+	print STDERR "Usage: getquote TICKER\n";
+	exit 1;
+}
+
+sub json_req {
+	my $req = HTTP::Request->new('GET', shift);
+	my $ua = LWP::UserAgent->new(agent => 'perl/' . $^V);
+	$ua->timeout($timeout);
+	my $res = $ua->request($req);
+	if ($res->is_success) {
+		return decode_json($res->decoded_content);
+	}
+}
+
+if ($symbol eq '$') {
+	if (my $ticker = json_req('https://api.bitcoinaverage.com/ticker/USD')) {
+		$price = sprintf '%.8f BTC', 1/$ticker->{last}
+	}
+}
+
+if ($symbol eq 'BTC') {
+	if (my $ticker = json_req('https://api.bitcoinaverage.com/ticker/USD')) {
+		$price = '$' . $ticker->{last};
+	}
+}
+
+my %cryptsy_markets = (
+	LTC => 3,
+	NMC => 29,
+	PPC => 28,
+	XPM => 63,
+	FTC => 5,
+);
+
+my %coinabul_markets = (
+	AU => 'Gold',
+	AG => 'Silver',
+);
+
+if (my $marketid = $coinabul_markets{$symbol}) {
+	if (my $market = json_req('http://coinabul.com/api.php')) {
+		$price = '$' . $market->{$marketid}->{USD};
+	}
+}
+
+if (my $marketid = $cryptsy_markets{$symbol}) {
+	my $market = json_req('http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid=' . $marketid);
+	if ($market and $market->{success} == 1) {
+		$price = $market->{return}->{markets}->{$symbol}->{lasttradeprice} . ' BTC';
+	}
+}
+
+if (!$price) {
+	if ($symbol eq 'AM') {
+		$symbol = 'AM1';
+	}
+	if (my $ticker = json_req('https://www.havelockinvestments.com/r/ticker')) {
+		if (my $details = $ticker->{$symbol}) {
+			$price = $details->{last} . ' BTC';
+		}
+	}
+}
+
+if (!$price) {
+	if (my $info = json_req('https://cryptostocks.com/api/get_security_info.json?ticker=' . $symbol)) {
+		if ($info and $info->{return_code} == 0) {
+			$price = $info->{last_price} . ' ' . $info->{currency};
+		}
+	}
+}
+
+if (!$price) {
+	my $q = Finance::Quote->new;
+	$q->timeout($timeout);
+	$q->require_labels(qw/price/);
+	my %quotes = $q->fetch("nasdaq", $symbol);
+	if ($quotes{$symbol}) {
+		$price = '$' . $quotes{$symbol, "price"};
+	}
+}
+
+if ($price) {
+    print $price, "\n";
+} else {
+    exit 1;
+}
