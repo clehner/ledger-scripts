@@ -1,0 +1,136 @@
+#!/usr/bin/env perl
+
+use strict;
+
+$| = 1;
+
+my $brokerage_account = 'Assets:Broker:Fidelity';
+my $commission_account = 'Expenses:Broker:Fidelity';
+my $fee_account = 'Expenses:Broker:Fidelity:Fee';
+my $dividend_account = 'Income:Dividends';
+my $interest_account = 'Income:Interest';
+my $long_term_cap_gains_account = 'Income:Dividend:Long-term Capital Gains';
+my $deposit_account = 'Income';
+my $debit_account = 'Expenses';
+
+my %symbols = (
+    '06740C261' => 'VIX'
+);
+
+sub process_field {
+    my $value = $_;
+    if (substr($value, 0, 1) eq ' ') {
+        substr($value, 1);
+    } else {
+        +$value;
+    }
+}
+
+while (<>) {
+    my @fields = split(',', $_);
+    my ($run_date, $action, $symbol, $security_description, $security_type, $quantity,
+        $price, $commission, $fees, $accrued_interest, $amount, $settlement_date) =
+    map { process_field($_); } @fields;
+
+    next if ($run_date eq 'Run Date');
+
+    my ($month, $day, $year) = $run_date =~ /(.*)\/(.*)\/(.*)/;
+    my $date = $year . '/' . $month . '/' . $day;
+
+    if (my $symbol2 = $symbols{$symbol}) {
+        $symbol = $symbol2;
+    }
+
+    my $from_account;
+    my $check_num;
+    my $amount_symbol = '$' . $amount;
+    my $description = $security_description;
+
+    if ($action eq 'YOU BOUGHT') {
+        # Fix price
+        #my $price_calculated = ($amount + $commission + $fees) / -$quantity;
+        #my $commission_calculated = -($price * $quantity + $amount + $fees) + 0.00000001;
+
+        $amount_symbol = $quantity . ' ' . $symbol;
+        $from_account = $brokerage_account;
+        $description = 'Buy: ' . $security_description;
+    }
+
+    elsif ($action =~ /YOU SOLD/ or $action eq 'REINVESTMENT') {
+        if ($security_description eq 'CASH') {
+            next;
+        }
+
+        $amount_symbol = $quantity . ' ' . $symbol;
+        $from_account = $brokerage_account;
+        $description = 'Sell: ' . $security_description;
+    }
+
+    elsif ($action eq 'DIVIDEND RECEIVED') {
+        $from_account = $dividend_account;
+        $amount *= -1;
+        $description = 'Dividend: ' . $security_description;
+    }
+
+    elsif ($action eq 'INTEREST EARNED') {
+        $from_account = $interest_account;
+        $amount *= -1;
+        $description = 'Interest';
+    }
+
+    elsif ($action eq 'LONG-TERM CAP GAIN') {
+        $from_account = $long_term_cap_gains_account;
+        $amount *= -1;
+        $description = 'Long-term capital gains: ' . $security_description;
+    }
+
+    elsif ($action eq 'Electronic Funds Transfer Paid') {
+        $from_account = $debit_account;
+        $amount *= -1;
+        $description = $action;
+    }
+
+    elsif (my ($sender) = $action =~ /DIRECT\s*DEPOSIT (.*)/) {
+        $from_account = $deposit_account;
+        $amount *= -1;
+        $description = $sender;
+    }
+
+    elsif ($action =~ /^CHECK RECEIVED/) {
+        $from_account = $deposit_account;
+        $amount *= -1;
+        $description = 'Check received';
+    }
+
+    elsif (my ($receiver) = $action =~ /^(?:DIRECT\s*DEBIT|DEBIT CARD PURCHASE)\s*(.*)/) {
+        $from_account = $debit_account;
+        $amount *= -1;
+        $description = $receiver;
+    }
+
+    elsif (my ($fee) = $action =~ /FEE CHARGED\s*(.*)/) {
+        $from_account = $fee_account;
+        $amount *= -1;
+        $description = $fee;
+    }
+
+    elsif (($check_num) = $action =~ /Check Paid # ?([0-9]*)/) {
+        $from_account = $debit_account;
+        $amount *= -1;
+        $description = 'Check paid';
+    }
+
+    else {
+        die("Unknown transaction type: $action");
+    }
+
+    my $check = $check_num ? '(#' . $check_num . ') ' : '';
+
+    print "\n";
+    printf "%s %s%s %s\n", $date, $check, $description;
+    printf "\t%-36s %s\n", $brokerage_account, $amount_symbol;
+    printf "\t%-36s \$%.02f\n", $from_account, $amount;
+    printf "\t%-36s \$%.02f\n", $commission_account, $commission if ($commission);
+    printf "\t%-36s \$%.02f\n", $fee_account, $fees if ($fees);
+
+}
