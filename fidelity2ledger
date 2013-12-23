@@ -46,21 +46,21 @@ while (<>) {
     my $amount_symbol = '$' . $amount;
     my $description = $security_description;
 
-    if ($action eq 'YOU BOUGHT') {
+    if ($action eq 'YOU BOUGHT' or $action eq 'REINVESTMENT') {
         # Fix price
         #my $price_calculated = ($amount + $commission + $fees) / -$quantity;
         #my $commission_calculated = -($price * $quantity + $amount + $fees) + 0.00000001;
+
+        if ($security_description eq 'CASH') {
+            next;
+        }
 
         $amount_symbol = $quantity . ' ' . $symbol;
         $from_account = $brokerage_account;
         $description = 'Buy: ' . $security_description;
     }
 
-    elsif ($action =~ /YOU SOLD/ or $action eq 'REINVESTMENT') {
-        if ($security_description eq 'CASH') {
-            next;
-        }
-
+    elsif ($action =~ /YOU SOLD/) {
         $amount_symbol = $quantity . ' ' . $symbol;
         $from_account = $brokerage_account;
         $description = 'Sell: ' . $security_description;
