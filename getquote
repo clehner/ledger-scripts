@@ -66,16 +66,32 @@ my %coinabul_markets = (
 	AG => 'Silver',
 );
 
+my %cryptotrade_markets = (
+	CTB => 'BTC',
+	CTL => 'LTC',
+	ESB => 'BTC',
+	ESL => 'LTC',
+	GGB => 'BTC',
+);
+
 if (my $marketid = $coinabul_markets{$symbol}) {
 	if (my $market = json_req('http://coinabul.com/api.php')) {
 		$price = '$' . $market->{$marketid}->{USD};
 	}
 }
 
-if (my $marketid = $cryptsy_markets{$symbol}) {
+if (!$price and my $marketid = $cryptsy_markets{$symbol}) {
 	my $market = json_req('http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid=' . $marketid);
 	if ($market and $market->{success} == 1) {
 		$price = $market->{return}->{markets}->{$symbol}->{lasttradeprice} . ' BTC';
+	}
+}
+
+if (!$price and my $currency = $cryptotrade_markets{$symbol}) {
+	my $ticker = lc($symbol . '_' . $currency);
+	my $resp = json_req('https://crypto-trade.com/api/1/ticker/' . $ticker);
+	if ($resp->{status} eq 'success') {
+		$price = $resp->{data}->{last} . ' ' . $currency;
 	}
 }
 
