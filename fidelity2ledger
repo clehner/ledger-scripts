@@ -37,9 +37,7 @@ while (<>) {
     my ($month, $day, $year) = $run_date =~ /(.*)\/(.*)\/(.*)/;
     my $date = $year . '/' . $month . '/' . $day;
 
-    if (my $symbol2 = $symbols{$symbol}) {
-        $symbol = $symbol2;
-    }
+    $symbol = $symbols{$symbol} // $symbol;
 
     my $from_account;
     my $check_num;
@@ -126,11 +124,11 @@ while (<>) {
 
     my $check = $check_num ? '(#' . $check_num . ') ' : '';
 
-    print "\n";
-    printf "%s %s%s %s\n", $date, $check, $description;
+    printf "%s %s%s\n", $date, $check, $description;
     printf "\t%-36s %s\n", $brokerage_account, $amount_symbol;
     printf "\t%-36s \$%.02f\n", $from_account, $amount;
     printf "\t%-36s \$%.02f\n", $commission_account, $commission if ($commission);
     printf "\t%-36s \$%.02f\n", $fee_account, $fees if ($fees);
+    print "\n";
 
 }
