@@ -5,6 +5,7 @@ BEGIN {
 }
 {
     created_at=$1
+    if (created_at == "created_at") next;
     buyer=$2
     seller=$3
     trade_type=$4
@@ -24,19 +25,23 @@ BEGIN {
     # As of 2013-12-18, localbitcoins csv does not include the fee.
     # Calculate it here.
     # For newer transactions, it seems to be included in the btc_amount
-    #fee_btc = btc_amount/100
-    fee_btc = btc_amount/101
+    if (trade_type == "LOCAL_BUY") {
+    } else if (created_at > "2013-02-08" && created_at < "2013-07") {
+        fee_btc = btc_amount/100
+        btc_amount += fee_btc
+    } else {
+        fee_btc = btc_amount/101
+    }
 
     if (trade_type == "LOCAL_SELL") {
         printf "%s (#) %s\n", released_date, buyer;
-        printf "\tAssets:Bitcoin:localbitcoins        -%s BTC\n", btc_amount;
-        printf "\tExpenses:Broker:localbitcoins        %s BTC\n", fee_btc;
-        printf "\tAssets:Cash                         $%s\n", fiat_amount;
-    } else {
+        printf "\tAssets:Bitcoin:LocalBitcoins        -%.8f BTC\n", btc_amount;
+        printf "\tExpenses:Broker:LocalBitcoins        %.8f BTC\n", fee_btc;
+        printf "\tAssets:Cash                         $%.2f\n", fiat_amount;
+    } else if (trade_type == "LOCAL_BUY") {
         printf "%s (#) %s\n", released_date, seller;
-        printf "\tAssets:Bitcoin:localbitcoins         %s BTC\n", btc_amount;
-        printf "\tExpenses:Broker:localbitcoins        %s BTC\n", fee_btc;
-        printf "\tAssets:Cash                         -$%s\n", fiat_amount;
+        printf "\tAssets:Bitcoin:LocalBitcoins         %.8f BTC\n", btc_amount;
+        printf "\tAssets:Cash                         -$%.2f\n", fiat_amount;
     }
     print "";
 }
