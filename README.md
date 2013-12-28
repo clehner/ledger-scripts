@@ -11,6 +11,9 @@ Data import scripts
 `lbcsv2ledger`
 Import LocalBitcoins transactions into ledger
 
+`dwolla2ledger`
+Import Dwolla transactions.
+
 `getquote`
 Get quotes for various stocks, currencies, and commodities.
 
