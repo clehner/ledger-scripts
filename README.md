@@ -14,3 +14,6 @@ Import LocalBitcoins transactions into ledger
 `getquote`
 Get quotes for various stocks, currencies, and commodities.
 
+`mint2ledger`
+Import Mint transactions
+

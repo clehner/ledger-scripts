@@ -1,0 +1,154 @@
+#!/usr/bin/env perl
+
+use strict;
+
+$| = 1;
+
+# Customize your accounts
+
+my %accounts = (
+    'Simple Account' => 'Assets:Checking:Simple',
+    'PayPal Account' => 'Assets:Broker:Paypal',
+    'Shares' => 'Assets:Savings:Genesee Co-Op',
+    'Cash' => 'Assets:Cash',
+
+    'Income' => 'Income',
+    'Interest Income' => 'Income:Interest',
+    'Gift Received' => 'Income:Gift',
+    'Transfer for Cash Spending' => 'Assets:Cash',
+    'Returned Purchase' => 'Expenses:Shopping',
+
+    'Public Transportation' => 'Expenses:Transportation',
+    'Gas & Fuel' => 'Expenses:Transportation:Gasoline',
+    'Service & Parts' => 'Expenses:Transportation:Auto Repair',
+    'Electronics & Software' => 'Expenses:Shopping:Electronics',
+    'Restaurants' => 'Expenses:Food:Restaurant',
+    'Groceries' => 'Expenses:Food:Groceries',
+    'Food & Dining' => 'Expenses:Food',
+
+    'Federal Tax' => 'Expenses:Tax:Federal',
+    'State Tax' => 'Expenses:Tax:State',
+    'Arts' => 'Expenses:Theatre',
+    'Tuition' => 'Expenses:Education:Tuition',
+    'Tests' => 'Expenses:Education:Tests',
+
+);
+my $account_unknown = "Assets:Unknown";
+
+# Name accounts based on payee name
+my %payee_accounts = (
+    'ATM Cash Deposit' => 'Assets:Cash',
+    'ATM Withdrawal' => 'Assets:Cash',
+    'Hold' => 'Broker:Hold',
+    'Hold Release' => 'Broker:Hold',
+    'Www Dealextreme Com' => 'Expenses:Shopping:Electronics',
+    'Paymentto Bountysource' => 'Expenses:Donations:Software',
+);
+
+sub print_entry {
+    my $entry = shift;
+    return unless $entry;
+    print "\n";
+    printf ";  %s\n", $entry->{notes} if ($entry->{notes});
+    printf ";  :%s:\n", $entry->{labels} if ($entry->{labels});
+    printf "%s %s\n", $entry->{date}, $entry->{payee};
+    printf "\t%-36s \$%s\n", $entry->{to_account}, $entry->{amount};
+    printf "\t%s\n", $entry->{from_account};
+}
+
+my @buffer = ();
+my $buffer_i = 0;
+my $buffer_len = 10;
+
+while (<>) {
+    my ($null, $date, $description, $original_description, $amount, $transaction_type, $category, $account_name, $labels, $notes) = split(/^"|","|"$/, $_);
+
+    next if ($amount eq 'Amount');
+
+    my $payee = $description;
+    my ($month, $day, $year) = $date =~ /(.*)\/(.*)\/(.*)/;
+    $date = $year . '/' . $month . '/' . $day;
+    my $my_account = $accounts{$account_name} // $account_unknown;
+    my $their_account;
+
+    if (my $account = $payee_accounts{$payee}) {
+        $their_account = $account;
+    }
+
+    elsif ($transaction_type eq 'debit') {
+        $their_account = $accounts{$category} // 'Expenses:' . $category;
+    } else {
+        $their_account = $accounts{$category} // 'Income:' . $category;
+    }
+
+    # Combine matching transfer entries
+    if ($their_account eq 'Expenses:Transfer') {
+        if (my ($corresponding_obj) = grep {
+            $_->{from_account} eq 'Income:Transfer'
+            and $_->{amount} eq $amount
+        } @buffer) {
+            $corresponding_obj->{from_account} = $my_account;
+            next;
+        }
+    }
+    elsif ($their_account eq 'Income:Transfer' or $payee eq 'Keep Change Acct' or $payee =~ /Trnsfr/ or $their_account == 'Income') {
+        if (my ($corresponding_obj) = grep {
+            ($_->{to_account} eq 'Expenses:Transfer' or
+                $_->{payee} =~ /Tra?nsfe?r/)
+            and $_->{amount} eq $amount
+        } @buffer) {
+            $corresponding_obj->{to_account} = $my_account;
+            next;
+        }
+    }
+
+    # Custom adjustments
+
+    elsif ($payee =~ /trailways/i) {
+        $payee = 'Adirondack Trailways';
+        $their_account = 'Expenses:Transportation:Bus';
+    }
+
+    elsif ($labels =~ /genealogy/i or $notes =~ /genealogy/i) {
+        $labels = '';
+        $notes = '';
+        $their_account = 'Expenses:Genealogy:Records';
+    }
+
+    elsif (($payee eq 'iTunes' and $notes =~ /Pro/) or
+        $payee =~ /itunes app|app store/i) {
+        $their_account = 'Expenses:Software';
+    }
+
+    my ($to_account, $from_account);
+    if ($transaction_type eq 'debit') {
+        $to_account = $their_account;
+        $from_account = $my_account;
+    } else {
+        $to_account = $my_account;
+        $from_account = $their_account;
+    }
+
+    # Add the entry to the buffer
+    my $obj = {
+        date => $date,
+        payee => $payee,
+        amount => $amount,
+        to_account => $to_account,
+        from_account => $from_account,
+        notes => $notes,
+        labels => $labels,
+    };
+    if (my $prev_obj = $buffer[$buffer_i]) {
+        print_entry $prev_obj;
+    }
+    $buffer[$buffer_i] = $obj;
+    $buffer_i++;
+    $buffer_i %= $buffer_len;
+}
+
+# print the rest of the buffer
+for my $i ($buffer_i .. $buffer_i+$buffer_len-1) {
+    print_entry $buffer[$i % $buffer_len];
+}
+
