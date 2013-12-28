@@ -24,7 +24,7 @@ while (<>) {
                         $type eq 'fee' ? $dwolla_fee_account :
                         $dwolla_account;
 
-    printf "%s (#%s) %s\n", $date, $id, $other_entity;
+    printf "%s %s\n", $date, $other_entity;
     printf "    %s %27s\n", $dwolla_account, (sprintf "\$%.02f", -$amount);
     printf "    %s\n\n", $other_account;
 }
