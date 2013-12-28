@@ -1,0 +1,238 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Time::Piece;
+use Time::Seconds 'ONE_DAY';
+
+$| = 1;
+
+my @files;
+my @buffer;
+my $buffer_size = 10;
+
+my $dateformat = "%Y/%m/%d";
+# acceptable time difference to consider transactions matching
+my $time_difference = 5 * ONE_DAY;
+
+if ($#ARGV == -1) {
+    print STDERR "Usage: $0 [-o merged-journal.ledger] [journal.ledger]...\n";
+    exit 1;
+}
+
+my @in_filenames;
+my $out_filename;
+
+my $editor = $ENV{EDITOR} // 'vi +"norm zR"';
+
+while (@ARGV) {
+    my $arg = shift;
+    if ($arg eq '-o') {
+        $out_filename = shift;
+    } else {
+        push @in_filenames, $arg;
+    }
+}
+
+if ($out_filename) {
+    open OUTFILE, '>', $out_filename;
+    OUTFILE->autoflush(1);
+} else {
+    open OUTFILE, '>&STDOUT';
+}
+
+sub read_entry {
+    my $fh = shift;
+    return if !defined $fh or eof $fh;
+
+    my $amounts = {};
+    my $lines = [];
+    my $entry = {
+        lines => $lines,
+        amounts => $amounts,
+        fh => $fh,
+    };
+
+    # Read lines until found entry date
+    while(1) {
+        my $line = <$fh>;
+        unless (defined $line) {
+            # fh is closed
+            return;
+        }
+        push @$lines, $line;
+        if ($line =~ /^([0-9]{4}\/[0-9]{1,2}\/[0-9]{1,2})/) {
+            # Make the date string lexically comparable
+            $entry->{date} = Time::Piece->strptime($1, $dateformat) or die("$!");
+            last;
+        }
+    }
+
+    # Read until reaching a blank line
+    while(1) {
+        my $line = <$fh>;
+        unless (defined $line) {
+            # fh is closed
+            push @$lines, "\n";
+            return $entry;
+        }
+        push @$lines, $line;
+        return $entry if $line =~ /^$/;
+        # Record item amounts
+        if ($line =~ /^\s*[^;].*\s+([^@ ]*? ?[^ ]?[0-9.,-]+[^@]*?)\s+(?:;.*)?$/) {
+            $amounts->{$1} = 1;
+        }
+    }
+
+    return $entry;
+}
+
+sub print_entry {
+    my ($stream, $entry) = @_;
+    #$stream //= \*STDOUT;
+    #print $stream "fh: ".($entry->{fh} // 'null').". i: ".$entry->{buffer_i}."\n";
+    print $stream $_ for @{ $entry->{lines} };
+}
+
+sub pick_oldest_entry {
+    my @defined_entries = grep { defined $_ } @buffer;
+    return unless scalar @defined_entries;
+    my $oldest = shift @defined_entries;
+    for my $entry (@defined_entries) {
+        if (abs($entry->{date} - $oldest->{date}) < $time_difference) {
+            $oldest = $entry;
+        }
+    }
+    return $oldest;
+}
+
+sub entry_matches_date {
+    my ($entry, $date) = @_;
+    #print($date, $entry->{date}, "\n");
+    return ($date eq $entry->{date});
+}
+
+sub entry_matches_amounts {
+    my ($entry, $amounts) = @_;
+    for my $amt (keys $entry->{amounts}) {
+        return 1 if $amounts->{$amt};
+    }
+    return 0;
+}
+
+sub find_matching_entries {
+    my $entry = shift;
+    my $date = $entry->{date};
+    my $amounts = $entry->{amounts};
+    my $fh = $entry->{fh};
+    my @matches = grep {
+        defined $_ and
+        $fh != $_->{fh} and
+        entry_matches_date($_, $date) and
+        entry_matches_amounts($_, $amounts)
+    } @buffer;
+    unshift @matches, $entry if (scalar @matches);
+    return @matches;
+}
+
+sub merge_edit_entries {
+    my (@entries) = @_;
+    my $tmp = `mktemp --suffix .merge.ledger`;
+    chomp $tmp;
+    open TMP, '>', $tmp
+        or die "Unable to open temp file for writing: $!";
+    print_entry \*TMP, $_ for @entries;
+    close TMP;
+    system("$editor $tmp");
+    open TMP, '<', $tmp
+        or die "Unable to open temp file for reading $!";
+    print OUTFILE while (<TMP>);
+    close TMP;
+    system("rm $tmp");
+    return 1;
+}
+
+sub merge_entries {
+    my (@entries) = @_;
+    print STDERR "Found possible matching transactions:\n\n";
+    print_entry \*STDERR, $_ for @entries;
+    my $entry_choices = join ' ', map { "[$_]" } (1 .. scalar @entries);
+    do {
+        print STDERR "Merge these entries? $entry_choices [n]o [e]dit\n> ";
+        my $input = <STDIN>;
+        return 0 unless defined $input;
+        chomp $input;
+        if ($input =~ /^[1-9][0-9]*$/) {
+            # Use one entry and discard the others
+            if (my $entry = $entries[$input-1]) {
+                print "Using entry $input.\n";
+                print_entry \*OUTFILE, $entries[$input-1];
+                return 1;
+            }
+        } elsif ($input =~ /^e(dit)?$/i) {
+            print "Editing entries.\n";
+            merge_edit_entries(@entries) or die("Merge edit failed");
+            return 1;
+        } elsif ($input =~ /^n?\s*$/i) {
+            print "Keeping entries separate.\n";
+            return 0;
+        }
+    } until (0);
+}
+
+sub replace_entry {
+    my $entry = shift;
+    # Read a new entry and add it to the buffer,
+    # replacing the old entry
+    my $i = $entry->{buffer_i};
+    my $fh = $entry->{fh};
+    if (my $new_entry = read_entry $fh) {
+        $buffer[$i] = $new_entry;
+        $new_entry->{buffer_i} = $i;
+    } else {
+        undef $buffer[$i];
+    }
+}
+
+# Open the ledger journals
+for my $filename (@in_filenames) {
+    open my $fh, '<', $filename or die "Unable to open file $filename: $!";
+    push @files, $fh;
+}
+
+# Read initial buffer of entries from each journal
+for my $fh (@files) {
+    for my $i (1 .. $buffer_size) {
+        my $entry = read_entry($fh);
+        last unless $entry;
+        push @buffer, $entry;
+        $entry->{buffer_i} = $#buffer;
+    }
+}
+
+# While the buffers contain entries,
+# pick the oldest entry
+while (my $entry = pick_oldest_entry) {
+    # Remove this entry and read another
+    replace_entry $entry;
+    # Look for entries matching this one
+    if (my @matching_entries = find_matching_entries $entry) {
+        # Present merge choices,
+        # and let the merged entry be printed
+        if (merge_entries(@matching_entries)) {
+            # user merged the entries
+            # Remove the merged entries from their buffers
+            replace_entry $_ for @matching_entries;
+        } else {
+            # user kept the entries seperate.
+            # Print the single entry and leave the others in their buffers
+            print_entry \*OUTFILE, $entry;
+        }
+    } else {
+        # No matching entries.
+        # Print the entry
+        print_entry \*OUTFILE, $entry;
+    }
+}
+
+# Read entries from the journals

@@ -47,3 +47,8 @@ and NASDAQ.
 
 Filter incoming emails (from Claws-mail) and write transactions into a ledger
 journal.
+
+#### `merge-ledger`
+
+Merge multiple ledger journals into one, in roughly time order. It prompts you to
+merge transactions between journals that might be the same.

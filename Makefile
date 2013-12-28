@@ -1,4 +1,4 @@
-symlinks = getquote \
+symlinks = merge-ledger getquote \
 		   dwolla2ledger fidelity2ledger lbcsv2ledger mint2ledger
 
 prefix = /usr/local
