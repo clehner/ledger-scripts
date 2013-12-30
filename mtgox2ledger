@@ -143,6 +143,15 @@ sub get_buffered_entry {
 	return $entry;
 }
 
+sub format_money {
+	my ($amount, $currency) = @_;
+	if ($currency eq 'USD') {
+		return sprintf("\$%f", $amount);
+	} else {
+		return sprintf("%f ", $amount) . $currency;
+	}
+}
+
 # Print a sale transaction consisting of input, output, and fee
 sub print_sale {
 	my ($in, $out, $fee) = @_;
@@ -156,9 +165,9 @@ sub print_sale {
 		$out_amount -= $fee_amount;
 	}
 	printf "%s %s\n", $in->{date_str}, $in->{info};
-	printf "    %-20s  %f %s\n", $broker_account, $in_amount, $in->{currency};
-	printf "    %-20s  %f %s\n", $broker_account, $out_amount, $out->{currency};
-	printf "    %-20s  %f %s\n", $fee_account, $fee_amount, $fee->{currency} if ($fee);
+	printf "    %-20s  %s\n", $broker_account, format_money($in_amount, $in->{currency});
+	printf "    %-20s  %s\n", $broker_account, format_money($out_amount, $out->{currency});
+	printf "    %-20s  %s\n", $fee_account, format_money($fee_amount, $fee->{currency}) if ($fee);
 	print "\n";
 }
 
@@ -201,7 +210,7 @@ sub print_entry {
 	}
 
 	printf "%s %s\n", $entry->{date_str}, $description;
-	printf "    %-20s  %f %s\n", $broker_account, $entry->{value}, $currency;
+	printf "    %-20s  %s\n", $broker_account, format_money($entry->{value}, $currency);
 	printf "    %s\n\n", $other_account;
 }
 
