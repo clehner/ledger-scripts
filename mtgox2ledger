@@ -102,15 +102,10 @@ my @buffer;
 sub entry_matches {
 	my ($entry, $tid, $type_n) = @_;
 	my $type = $entry->{type};
-	return 0 unless ($entry->{tid} eq $tid);
-
-	if ($type_n > 0) {
-		return ($type eq 'in' or $type eq 'earned') ? '1' : 0;
-	} elsif ($type_n == 0) {
-		return ($type eq 'out' or $type eq 'spent') ? '1' : 0;
-	} elsif ($type_n < 0) {
-		return $type eq 'fee' ? '1' : 0;
-	}
+	return ($entry->{tid} eq $tid) &&
+		($type_n > 0 ? ($type eq 'in' or $type eq 'earned') :
+		$type_n == 0 ? ($type eq 'out' or $type eq 'spent') :
+		$type_n < 0 ? ($type eq 'fee') : 0);
 }
 
 # Get the next entry, optionally of a specific tid and type, with buffering
