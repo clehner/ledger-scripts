@@ -160,10 +160,10 @@ sub print_sale {
 	} else {
 		$out_amount -= $fee_amount;
 	}
-	printf "%s %s  ; %s\n", $in->{date_str}, $in->{info}, $in->{tid};
-	printf "    %-20s  %f %s  ; %s\n", $broker_account, $in_amount, $in->{currency}, $in->{index};
-	printf "    %-20s  %f %s  ; %s\n", $broker_account, $out_amount, $out->{currency}, $out->{index};
-	printf "    %-20s  %f %s  ; %s\n", $fee_account, $fee_amount, $fee->{currency}, $fee->{index} if ($fee);
+	printf "%s %s\n", $in->{date_str}, $in->{info};
+	printf "    %-20s  %f %s\n", $broker_account, $in_amount, $in->{currency};
+	printf "    %-20s  %f %s\n", $broker_account, $out_amount, $out->{currency};
+	printf "    %-20s  %f %s\n", $fee_account, $fee_amount, $fee->{currency} if ($fee);
 	print "\n";
 }
 
