@@ -31,6 +31,11 @@ Import Dwolla transactions.
 Combines transfers between accounts, and allows for abritrary renaming of
 transactions.
 
+#### `mtgox2ledger`
+Import MtGox trading history.
+
+Reads both the USD and BTC CSV files exported from Mt.Gox.
+
 More scripts
 ------------
 
