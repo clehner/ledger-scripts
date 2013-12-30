@@ -1,7 +1,8 @@
 ledger-scripts
 ==============
 
-A collection of scripts for helping to organize one's finances using ledger,
+A collection of scripts for helping to organize one's finances using
+[ledger](ledger-cli.org),
 with a focus on crypto-currencies.
 
 © 2013 Charles Lehner, [MIT License](http://cel.mit-license.org/)
@@ -25,16 +26,38 @@ Handles commodities/funds properly.
 #### `mint2ledger`
 Import Mint transactions.
 
-#### `dwolla2ledger`
-Import Dwolla transactions.
-
 Combines transfers between accounts, and allows for abritrary renaming of
 transactions.
+
+#### `dwolla2ledger`
+Import transactions from a Dwolla statement.
 
 #### `mtgox2ledger`
 Import MtGox trading history.
 
 Reads both the USD and BTC CSV files exported from Mt.Gox.
+
+Does not combine corresponding withdraw fees and withdraw debits.
+
+#### `btce2ledger`
+Import BTC-E trading history. *Incomplete, but may be useful for a start.*
+
+Reads data that you copy and paste from BTC-E's Transactions history table.
+
+#### `electrum2ledger`
+TODO
+
+#### `coinbase2ledger`
+TODO
+
+#### `blockchain2ledger`
+TODO
+
+#### `havelock2ledger`
+TODO
+
+#### `campbx2ledger`
+TODO
 
 More scripts
 ------------
