@@ -50,8 +50,14 @@ and NASDAQ.
 
 #### `claws-filter`
 
-Filter incoming emails (from Claws-mail) and write transactions into a ledger
-journal.
+Detect transactions in incoming emails through the Claws Mail client and write
+them to a ledger journal.
+
+Handles:
+
+* Dividends received from Havelock and Cryptostocks.
+
+* Payments sent from Paypal, Dwolla, and Coinbase.
 
 #### `merge-ledger`
 

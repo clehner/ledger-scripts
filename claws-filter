@@ -61,6 +61,15 @@ sub payment_sent_dwolla {
 	}
 }
 
+sub payment_sent_coinbase {
+	my $amount = shift;
+	my ($description) = body() =~ /<p>Attached message:<\/p>\s*<blockquote>(.*?)<br>/s;
+	$description ||= 'Withdraw from Coinbase';
+
+	write_entry $description, $amount, "Expenses", "Assets:Bitcoin:Coinbase";
+	mark_as_read();
+}
+
 my ($from) = extract_addresses(header('from'));
 my ($subject) = header('subject');
 
@@ -79,3 +88,7 @@ payment_sent_paypal
 payment_sent_dwolla
 	if ($from eq 'no-reply@dwolla.com' &&
 		$subject =~ /^You have sent money/);
+
+payment_sent_coinbase $1
+	if ($from eq 'contact@coinbase.com' &&
+		$subject =~ /^You just sent (.*?) to/);
