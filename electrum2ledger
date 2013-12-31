@@ -1,0 +1,50 @@
+#!/usr/bin/awk -f
+
+BEGIN {
+	FPAT = "([^,]*)|(\"[^\"]+\")";
+	assets_account="Assets:Bitcoin:Electrum";
+	fee_account="Expenses:Broker:Miner Fees";
+	expenses_account="Expenses";
+	income_account="Income";
+}
+
+# Skip header
+/^transaction_hash.*/ {
+	next;
+}
+
+# Read transaction
+{
+	transaction_hash=$1
+	label=$2
+	confirmations=$3
+	value=+$4
+	fee=+$5
+	balance=$6
+	timestamp=$7
+
+	# Format date
+    i = index(timestamp, " ")-1;
+    date = substr(timestamp, 0, i);
+    gsub("-", "/", date);
+
+	# Remove quotes
+	sub(/^"(.*)"$/, "$1", label);
+
+	# Print fee only if we paid it
+	if (value > 0) {
+		fee = 0;
+	}
+
+	printf "%s %s\n", date, label;
+	printf "    %-32s  %12.8f BTC\n", assets_account, value;
+	if (value < 0) {
+		if (fee) {
+			printf "    %-32s  %12.8f BTC\n", fee_account, -fee;
+		}
+		printf "    %-32s  %12.8f BTC\n", expenses_account, fee-value;
+	} else {
+		printf "    %s\n", income_account;
+	}
+    print "";
+}

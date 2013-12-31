@@ -45,7 +45,9 @@ Import BTC-E trading history. *Incomplete, but may be useful for a start.*
 Reads data that you copy and paste from BTC-E's Transactions history table.
 
 #### `electrum2ledger`
-TODO
+Import transaction history from an Electrum wallet.
+
+Reads a CSV file exported from Electrum.
 
 #### `coinbase2ledger`
 TODO
@@ -86,3 +88,16 @@ Handles:
 
 Merge multiple ledger journals into one, in roughly time order. It prompts you to
 merge transactions between journals that might be the same.
+
+Similar projects
+----------------
+
+* [ledger-bitcoin](https://github.com/profmaad/ledger-bitcoin) by
+  [profmaad](https://github.com/profmaad)
+
+	* electrum2ledger
+	* bitstamp2ledger
+
+* [mint-to-ledger](https://github.com/shiinee/mint-to-ledger) by
+  [shiinee](https://github.com/shiinee/mint-to-ledger)
+
