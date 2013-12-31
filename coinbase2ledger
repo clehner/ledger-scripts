@@ -1,0 +1,56 @@
+#!/usr/bin/awk -f
+#
+# coinbase2ledger
+# Render transactions from Coinbase CSV into ledger format
+
+BEGIN {
+	FS=",";
+	assets_account="Assets:Bitcoin:Coinbase";
+	fee_account="Expenses:Broker:Coinbase";
+}
+
+function format_money(amount) {
+	if(currency == "USD")
+		return "$" amount;
+	else
+		return amount " " currency;
+}
+
+/^[0-9]/ {
+	timestamp = $1;
+	type = $2;
+	btc = $3;
+	subtotal = $4;
+	fees = $5;
+	total = $6;
+	currency = $7;
+	price_per_coin = $8;
+	payment_method = $9;
+	id = $10;
+
+    i = index(timestamp, " ")-1;
+    date = substr(timestamp, 1, i);
+    gsub("-", "/", date);
+
+	if (match(payment_method, /^.* [*-]/)) {
+		bank = substr(payment_method, 1, RLENGTH - 2);
+		account = "Assets:Bank:" bank;
+	} else {
+		account = "Assets";
+	}
+
+	if (type == "Buy") {
+		total *= -1;
+	} else {
+		btc *= -1;
+	}
+
+	description = type " BTC";
+
+	printf "%s %s\n", date, description;
+	printf "    %-32s  %16s\n", account, format_money(total);
+	if (fees) printf "    %-32s  %16s\n", fee_account, format_money(fees);
+	printf "    %-32s  %12s BTC @ %s\n", assets_account, btc,
+		   format_money(price_per_coin);
+    print "";
+}

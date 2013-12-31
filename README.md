@@ -50,7 +50,7 @@ Import transaction history from an Electrum wallet.
 Reads a CSV file exported from Electrum.
 
 #### `coinbase2ledger`
-TODO
+Import transactions from Coinbase CSV.
 
 #### `blockchain2ledger`
 Import transactions from a blockchain.info export.
