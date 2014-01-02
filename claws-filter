@@ -70,6 +70,19 @@ sub payment_sent_coinbase {
 	mark_as_read();
 }
 
+my $venmo_account = 'Assets:Broker:Venmo';
+sub payment_venmo {
+	my ($payee, $amount, $type) = @_;
+	my ($note) = body() =~ /<!-- note -->\s*<div>\s*<p>(.*?)<\/p>/s;
+	my $description = "$payee  ; $note";
+	if ($type > 0) {
+		write_entry $description, $amount, $venmo_account, 'Income';
+	} else {
+		write_entry $description, $amount, 'Expenses', $venmo_account;
+	}
+	mark_as_read();
+}
+
 my ($from) = extract_addresses(header('from'));
 my ($subject) = header('subject');
 
@@ -92,3 +105,11 @@ payment_sent_dwolla
 payment_sent_coinbase $1
 	if ($from eq 'contact@coinbase.com' &&
 		$subject =~ /^You just sent (.*?) /);
+
+if ($from eq 'venmo@venmo.com') {
+	payment_venmo $1, $2, -1
+		if ($subject =~ /^You paid (.*) (.*?)$/);
+
+	payment_venmo $1, $2, 1
+		if ($subject =~ /^(.*) paid you (.*?)$/);
+}
