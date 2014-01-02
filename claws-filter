@@ -45,7 +45,7 @@ sub dividend_cryptostocks {
 
 sub payment_sent_paypal {
 	my $body = decode_base64(body());
-	if (my ($amount, $payee) = $body =~ /You sent a payment for (.*?) USD to (.*?)\./) {
+	if (my ($amount, $payee) = $body =~ /You sent a (?:mobile )?payment for (.*?) USD to (.*?)\./) {
 		write_entry $payee, $amount, "Expenses", "Assets:Broker:Paypal";
 		mark_as_read();
 	}
@@ -91,4 +91,4 @@ payment_sent_dwolla
 
 payment_sent_coinbase $1
 	if ($from eq 'contact@coinbase.com' &&
-		$subject =~ /^You just sent (.*?) to/);
+		$subject =~ /^You just sent (.*?) /);
