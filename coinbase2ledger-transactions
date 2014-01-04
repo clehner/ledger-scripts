@@ -28,9 +28,9 @@ function unquote(str) {
 function set_buy_sell_note() {
 	if (btc_amount > 0 && transfer_total > 0) {
 		transfer_total = "-" transfer_total;
-		notes = "Coinbase Buy BTC";
+		notes = "Buy BTC";
 	} else {
-		notes = "Coinbase Sell BTC";
+		notes = "Sell BTC";
 	}
 }
 
@@ -90,7 +90,7 @@ function print_entry() {
 	}
 
 	# Detect bank, old style
-	if (match(notes, /(Paid for with \$[0-9.]* from|\$[0-9.]* will arrive in your bank account) /)) {
+	if (match(notes, /(Paid for with \$[0-9.,]* from|\$[0-9.,]* will arrive in your bank account) /)) {
 		source = substr(notes, RSTART + RLENGTH);
 		match(source, /[-*x]/);
 		bank = substr(source, 1, RSTART - 2);
@@ -127,9 +127,9 @@ broken && /^[^0-9]/ {
 	bitcoin_hash = $14;
 
 	# Detect buy/sell
-	if (match(notes, /^(Sold|Bought) [0-9.]* BTC for( for)? \$/)) {
+	if (match(notes, /^(Sold|Bought) [0-9.,]* BTC for( for)? \$/)) {
 		t = substr(notes, RSTART + RLENGTH);
-		match(t, /[0-9]*(\.[0-9]*)?/);
+		match(t, /[0-9,]*(\.[0-9]*)?/);
 		transfer_total = substr(t, 1, RLENGTH);
 		transfer_total_currency = "USD";
 
