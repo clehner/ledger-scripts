@@ -113,10 +113,10 @@ Similar projects
 ----------------
 
 * [ledger-bitcoin](https://github.com/profmaad/ledger-bitcoin) by
-  [profmaad](https://github.com/profmaad)
+[profmaad](https://github.com/profmaad)
 
-  * electrum2ledger
-  * bitstamp2ledger
+    * electrum2ledger
+    * bitstamp2ledger
 
 * [mint-to-ledger](https://github.com/shiinee/mint-to-ledger) by
   [shiinee](https://github.com/shiinee/mint-to-ledger)
