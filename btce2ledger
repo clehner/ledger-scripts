@@ -1,0 +1,40 @@
+#!/usr/bin/env perl
+
+use strict;
+
+my $broker_account = 'Assets:Broker:BTC-E';
+my $fee_account = 'Expenses:Broker:BTC-E';
+
+while (<>) {
+    my ($pair, $type, $amount, $price, $total, $date) = split ',';
+    next if $pair eq "Pair";
+
+    my ($day, $month, $year) = $date =~ /^([0-9]{2}).([0-9]{2}).([0-9]{2})/;
+    $date = "20$year/$month/$day";
+
+    my $description = ucfirst($type).' '.$pair;
+    my $sign = ($type eq 'sell') ? '-' : '';
+    my $total_sign = ($type eq 'buy') ? '-' : '';
+
+    my ($cur1, $cur2) = split '/', $pair;
+    my ($amount_num, $amount_cur) = split ' ', $amount;
+    my ($total_num, $total_cur) = split ' ', $total;
+
+    my ($fee_amount, $fee_cur);
+
+    if ($type eq 'buy') {
+        $total_num *= -1;
+        $fee_cur = $amount_cur;
+        $fee_amount = $amount_num * 0.002;
+        $amount_num -= $fee_amount;
+    } else {
+        $amount_num *= -1;
+        $fee_cur = $total_cur;
+        $fee_amount = $total_num * 0.002;
+        $total_num -= $fee_amount;
+    }
+    printf "%s %s\n", $date, $description;
+    printf "    %-20s  %.8f %s\n", $broker_account, $amount_num, $amount_cur;
+    printf "    %-20s  %.8f %s\n", $fee_account, $fee_amount, $fee_cur;
+    printf "    %-20s  %.8f %s\n\n", $broker_account, $total_num, $total_cur;
+}
