@@ -19,7 +19,8 @@ function format_money(amount, currency) {
 
 function unquote(str) {
 	if (match(str, /^".*"$/)) {
-		return substr(str, 2, RLENGTH - 2);
+		str = substr(str, 2, RLENGTH - 2);
+		gsub(/""/, "\"", str);
 	}
 	return str;
 }
@@ -99,6 +100,7 @@ function print_entry() {
 		broken = 1;
 	} else {
 		broken = 0;
+		notes = unquote(notes);
 		print_entry();
 	}
 }
