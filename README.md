@@ -61,7 +61,7 @@ TODO
 #### Coinbase
 
 Two scripts are provided for processing two types of CSV files that Coinbase
-exports.
+exports. For best results, run both and compare the results.
 
 * `coinbase2ledger-transactions`
 
@@ -112,8 +112,8 @@ Similar projects
 * [ledger-bitcoin](https://github.com/profmaad/ledger-bitcoin) by
   [profmaad](https://github.com/profmaad)
 
-	* electrum2ledger
-	* bitstamp2ledger
+  * electrum2ledger
+  * bitstamp2ledger
 
 * [mint-to-ledger](https://github.com/shiinee/mint-to-ledger) by
   [shiinee](https://github.com/shiinee/mint-to-ledger)

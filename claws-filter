@@ -8,108 +8,108 @@ use POSIX qw(strftime);
 use MIME::Base64;
 
 sub write_debug {
-	open FILE, '>', 'clawfilter.out';
-	print FILE shift;
-	close FILE;
+    open FILE, '>', 'clawfilter.out';
+    print FILE shift;
+    close FILE;
 }
 
 sub write_entry {
-	my ($payee, $amount, $account_to, $account_from) = @_;
-	my $date = header('date');
-	my $ledger_file = $ENV{LEDGER_FILE} // "Documents/Finances/journal.ledger";
+    my ($payee, $amount, $account_to, $account_from) = @_;
+    my $date = header('date');
+    my $ledger_file = $ENV{LEDGER_FILE} // "/home/cel/Documents/Finances/journal.ledger";
 
-	open LEDGER, '>>', $ledger_file
-		or die("Failed to open journal $ledger_file: $! in $ENV{PWD}");
-	$date = strftime "%Y/%m/%d", localtime(str2time($date));
-	printf LEDGER "\n%s %s", $date, $payee;
-	printf LEDGER "\n    %-36s%s", $account_to, $amount;
-	printf LEDGER "\n    %s\n", $account_from;
-	close LEDGER;
+    open LEDGER, '>>', $ledger_file
+        or die("Failed to open journal $ledger_file: $! in $ENV{PWD}");
+    $date = strftime "%Y/%m/%d", localtime(str2time($date));
+    printf LEDGER "\n%s %s", $date, $payee;
+    printf LEDGER "\n    %-36s%s", $account_to, $amount;
+    printf LEDGER "\n    %s\n", $account_from;
+    close LEDGER;
 }
 
 sub dividend_havelock {
-	my $body = body();
-	if (my ($ticker, $amount) = $body =~ /You have received a dividend payment from fund: (.*?)\n.*Total Dividend: (.*?) *(?:BTC)?\n/s) {
-		write_entry "$ticker Dividend", "$amount BTC", "Assets:Broker:Havelock", "Income:Dividends";
-		mark_as_read();
-	}
+    my $body = body();
+    if (my ($ticker, $amount) = $body =~ /You have received a dividend payment from fund: (.*?)\n.*Total Dividend: (.*?) *(?:BTC)?\n/s) {
+        write_entry "$ticker Dividend", "$amount BTC", "Assets:Broker:Havelock", "Income:Dividends";
+        mark_as_read();
+    }
 }
 
 sub dividend_cryptostocks {
-	my $body = body();
-	if (my ($ticker, $amount) = $body =~ /\((.*?)\) has paid a dividend .*? received a total dividend payment of (.*)/) {
-		write_entry "$ticker Dividend", $amount, "Assets:Broker:Cryptostocks", "Income:Dividends";
-		mark_as_read();
-	}
+    my $body = body();
+    if (my ($ticker, $amount) = $body =~ /\((.*?)\) has paid a dividend .*? received a total dividend payment of (.*)/) {
+        write_entry "$ticker Dividend", $amount, "Assets:Broker:Cryptostocks", "Income:Dividends";
+        mark_as_read();
+    }
 }
 
 sub payment_sent_paypal {
-	my $body = decode_base64(body());
-	if (my ($amount, $payee) = $body =~ /You sent a (?:mobile )?payment for (.*?) USD to (.*?)\./) {
-		write_entry $payee, $amount, "Expenses", "Assets:Broker:Paypal";
-		mark_as_read();
-	}
+    my $body = decode_base64(body());
+    if (my ($amount, $payee) = $body =~ /You sent a (?:mobile )?payment for (.*?) USD to (.*?)\./) {
+        write_entry $payee, $amount, "Expenses", "Assets:Broker:Paypal";
+        mark_as_read();
+    }
 }
 
 sub payment_sent_dwolla {
-	my ($base64) = body() =~ /\n\n(.*?)\n\n/s;
-	return unless $base64;
-	my $text = decode_base64($base64);
-	if (my ($amount, $payee) = $text =~ /You have successfully sent (\$.*?) to (.*)\./) {
-		write_entry $payee, $amount, "Expenses", "Assets:Broker:Dwolla";
-		mark_as_read();
-	}
+    my ($base64) = body() =~ /\n\n(.*?)\n\n/s;
+    return unless $base64;
+    my $text = decode_base64($base64);
+    if (my ($amount, $payee) = $text =~ /You have successfully sent (\$.*?) to (.*)\./) {
+        write_entry $payee, $amount, "Expenses", "Assets:Broker:Dwolla";
+        mark_as_read();
+    }
 }
 
 sub payment_sent_coinbase {
-	my $amount = shift;
-	my ($description) = body() =~ /<p>Attached message:<\/p>\s*<blockquote>(.*?)<br>/s;
-	$description ||= 'Withdraw from Coinbase';
+    my $amount = shift;
+    my ($description) = body() =~ /<p>Attached message:<\/p>\s*<blockquote>(.*?)<br>/s;
+    $description ||= 'Withdraw from Coinbase';
 
-	write_entry $description, $amount, "Expenses", "Assets:Bitcoin:Coinbase";
-	mark_as_read();
+    write_entry $description, $amount, "Expenses", "Assets:Bitcoin:Coinbase";
+    mark_as_read();
 }
 
 my $venmo_account = 'Assets:Broker:Venmo';
 sub payment_venmo {
-	my ($payee, $amount, $type) = @_;
-	my ($note) = body() =~ /<!-- note -->\s*<div>\s*<p>(.*?)<\/p>/s;
-	my $description = "$payee  ; $note";
-	if ($type > 0) {
-		write_entry $description, $amount, $venmo_account, 'Income';
-	} else {
-		write_entry $description, $amount, 'Expenses', $venmo_account;
-	}
-	mark_as_read();
+    my ($payee, $amount, $type) = @_;
+    my ($note) = body() =~ /<!-- note -->\s*<div>\s*<p>(.*?)<\/p>/s;
+    my $description = "$payee  ; $note";
+    if ($type > 0) {
+        write_entry $description, $amount, $venmo_account, 'Income';
+    } else {
+        write_entry $description, $amount, 'Expenses', $venmo_account;
+    }
+    mark_as_read();
 }
 
 my ($from) = extract_addresses(header('from'));
 my ($subject) = header('subject');
 
 dividend_havelock
-	if ($from =~ /\@havelockinvestments\.com$/ &&
-		$subject eq '[Havelock Investments] Dividend Received');
+    if ($from =~ /\@havelockinvestments\.com$/ &&
+        $subject eq '[Havelock Investments] Dividend Received');
 
 dividend_cryptostocks
-	if ($from eq 'customerservice@cryptostocks.com' &
-		$subject eq 'Dividend payment received');
+    if ($from eq 'customerservice@cryptostocks.com' &
+        $subject eq 'Dividend payment received');
 
 payment_sent_paypal
-	if ($from eq 'service@paypal.com' &&
-		$subject eq 'You sent a payment');
+    if ($from eq 'service@paypal.com' &&
+        $subject eq 'You sent a payment');
 
 payment_sent_dwolla
-	if ($from eq 'no-reply@dwolla.com' &&
-		$subject =~ /^You have sent money/);
+    if ($from eq 'no-reply@dwolla.com' &&
+        $subject =~ /^You have sent money/);
 
 payment_sent_coinbase $1
-	if ($from eq 'contact@coinbase.com' &&
-		$subject =~ /^You just sent (.*?) /);
+    if ($from eq 'contact@coinbase.com' &&
+        $subject =~ /^You just sent (.*?) /);
 
 if ($from eq 'venmo@venmo.com') {
-	payment_venmo $1, $2, -1
-		if ($subject =~ /^You paid (.*) (.*?)$/);
+    payment_venmo $1, $2, -1
+        if ($subject =~ /^You paid (.*) (.*?)$/);
 
-	payment_venmo $1, $2, 1
-		if ($subject =~ /^(.*) paid you (.*?)$/);
+    payment_venmo $1, $2, 1
+        if ($subject =~ /^(.*) paid you (.*?)$/);
 }

@@ -4,34 +4,34 @@
 # Parse CSV from blockchain.info into ledger format
 
 BEGIN {
-	FS=",";
-	assets_account="Assets:Bitcoin:Blockchain.info";
+    FS=",";
+    assets_account="Assets:Bitcoin:Blockchain.info";
 }
 
 # Skip header
 /^date/ {
-	next;
+    next;
 }
 
 # Read transaction
 {
-	date = $1;
-	description=$2;
-	money_in=+$3;
-	money_out=+$4;
-	tx=$5;
+    date = $1;
+    description=$2;
+    money_in=+$3;
+    money_out=+$4;
+    tx=$5;
 
     i = index(date, " ")-1;
     date = substr(date, 1, i);
     gsub("-", "/", date);
 
-	value = money_in - money_out;
-	account = money_in ? "Income" : "Expenses";
-	description = substr(description, 1, 1) tolower(substr(description, 2))
+    value = money_in - money_out;
+    account = money_in ? "Income" : "Expenses";
+    description = substr(description, 1, 1) tolower(substr(description, 2))
 
-	printf "; %s\n", tx;
-	printf "%s %s\n", date, description;
-	printf "    %-32s  %12.8f BTC\n", assets_account, value;
-	printf "    %s\n", account;
+    printf "; %s\n", tx;
+    printf "%s %s\n", date, description;
+    printf "    %-32s  %12.8f BTC\n", assets_account, value;
+    printf "    %s\n", account;
     print "";
 }

@@ -4,144 +4,144 @@
 # Render Coinbase Transactions CSV into a ledger journal
 
 BEGIN {
-	FPAT = "([^,]*)|(\"[^\"]+\")|(^Pa[^\"]+\")";
-	assets_account="Assets:Bitcoin:Coinbase";
-	fee_account="Expenses:Broker:Coinbase";
-	broken = 0;
+    FPAT = "([^,]*)|(\"[^\"]+\")|(^Pa[^\"]+\")";
+    assets_account="Assets:Bitcoin:Coinbase";
+    fee_account="Expenses:Broker:Coinbase";
+    broken = 0;
 }
 
 function format_money(amount, currency) {
-	if(currency == "USD")
-		return "$" amount;
-	else
-		return amount " " currency;
+    if(currency == "USD")
+        return "$" amount;
+    else
+        return amount " " currency;
 }
 
 function unquote(str) {
-	if (match(str, /^".*"$/)) {
-		str = substr(str, 2, RLENGTH - 2);
-		gsub(/""/, "\"", str);
-	}
-	return str;
+    if (match(str, /^".*"$/)) {
+        str = substr(str, 2, RLENGTH - 2);
+        gsub(/""/, "\"", str);
+    }
+    return str;
 }
 
 function set_buy_sell_note() {
-	if (btc_amount > 0 && transfer_total > 0) {
-		transfer_total = "-" transfer_total;
-		notes = "Buy BTC";
-	} else {
-		notes = "Sell BTC";
-	}
+    if (btc_amount > 0 && transfer_total > 0) {
+        transfer_total = "-" transfer_total;
+        notes = "Buy BTC";
+    } else {
+        notes = "Sell BTC";
+    }
 }
 
 function print_entry() {
-	description = notes;
+    description = notes;
 
-	if (bitcoin_hash) {
-		printf "; %s\n", bitcoin_hash;
-	}
-	printf "%s %s\n", date, notes;
-	printf "    %-32s  %12s BTC\n", assets_account, btc_amount;
+    if (bitcoin_hash) {
+        printf "; %s\n", bitcoin_hash;
+    }
+    printf "%s %s\n", date, notes;
+    printf "    %-32s  %12s BTC\n", assets_account, btc_amount;
 
-	if (!transfer_total) {
-		account = btc_amount > 0 ? "Income" : "Expenses";
-		printf "    %s\n", account;
-	} else {
-		printf "    %-32s  %16s\n", account,
-			format_money(transfer_total, transfer_total_currency);
-	}
-	if (transfer_fee) {
-		printf "    %-32s  %16s\n", fee_account,
-			format_money(transfer_fee, transfer_fee_currency);
-	}
+    if (!transfer_total) {
+        account = btc_amount > 0 ? "Income" : "Expenses";
+        printf "    %s\n", account;
+    } else {
+        printf "    %-32s  %16s\n", account,
+            format_money(transfer_total, transfer_total_currency);
+    }
+    if (transfer_fee) {
+        printf "    %-32s  %16s\n", fee_account,
+            format_money(transfer_fee, transfer_fee_currency);
+    }
     print "";
 }
 
 # Transaction
 /^[0-9]/ {
-	timestamp = $1;
-	balance = $2;
-	btc_amount = +$3;
-	to = $4;
-	notes = $5;
-	transfer_total = +$6;
-	transfer_total_currency = $7;
-	transfer_fee = +$8;
-	transfer_fee_currency = $9;
-	transfer_payment_method = $10;
-	transfer_id = $11;
-	order_price = $12;
-	order_currency = $13;
-	order_btc = $14;
-	order_tracking_code = $15;
-	order_paid_out = $16;
-	coinbase_id = $17;
-	bitcoin_hash = $18;
+    timestamp = $1;
+    balance = $2;
+    btc_amount = +$3;
+    to = $4;
+    notes = $5;
+    transfer_total = +$6;
+    transfer_total_currency = $7;
+    transfer_fee = +$8;
+    transfer_fee_currency = $9;
+    transfer_payment_method = $10;
+    transfer_id = $11;
+    order_price = $12;
+    order_currency = $13;
+    order_btc = $14;
+    order_tracking_code = $15;
+    order_paid_out = $16;
+    coinbase_id = $17;
+    bitcoin_hash = $18;
 
     i = index(timestamp, " ")-1;
     date = substr(timestamp, 1, i);
     gsub("-", "/", date);
 
-	if (match(order_tracking_code, /^.* [*-]/)) {
-		bank = substr(order_tracking_code, 1, RLENGTH - 2);
-		account = "Assets:Bank:" bank;
-	} else {
-		account = "Assets";
-	}
+    if (match(order_tracking_code, /^.* [*-]/)) {
+        bank = substr(order_tracking_code, 1, RLENGTH - 2);
+        account = "Assets:Bank:" bank;
+    } else {
+        account = "Assets";
+    }
 
-	# Detect bank, old style
-	if (match(notes, /(Paid for with \$[0-9.,]* from|\$[0-9.,]* will arrive in your bank account) /)) {
-		source = substr(notes, RSTART + RLENGTH);
-		match(source, /[-*x]/);
-		bank = substr(source, 1, RSTART - 2);
-		account = "Assets:Bank:" bank;
-		set_buy_sell_note();
-	}
+    # Detect bank, old style
+    if (match(notes, /(Paid for with \$[0-9.,]* from|\$[0-9.,]* will arrive in your bank account) /)) {
+        source = substr(notes, RSTART + RLENGTH);
+        match(source, /[-*x]/);
+        bank = substr(source, 1, RSTART - 2);
+        account = "Assets:Bank:" bank;
+        set_buy_sell_note();
+    }
 
-	#price = format_money(order_price / amount, transfer_total_currency);
-	if (notes ~ /^".*[^"]$/) {
-		broken = 1;
-	} else {
-		broken = 0;
-		notes = unquote(notes);
-		print_entry();
-	}
+    #price = format_money(order_price / amount, transfer_total_currency);
+    if (notes ~ /^".*[^"]$/) {
+        broken = 1;
+    } else {
+        broken = 0;
+        notes = unquote(notes);
+        print_entry();
+    }
 }
 
 # partial transaction line
 broken && /^[^0-9]/ {
-	broken = 0;
-	notes = unquote(notes " " $1);
-	transfer_total = +$2;
-	transfer_total_currency = $3;
-	transfer_fee = +$4;
-	transfer_fee_currency = $5;
-	transfer_payment_method = $6;
-	transfer_id = $7;
-	order_price = $8;
-	order_currency = $9;
-	order_btc = $10;
-	order_tracking_code = $11;
-	order_paid_out = $12;
-	coinbase_id = $13;
-	bitcoin_hash = $14;
+    broken = 0;
+    notes = unquote(notes " " $1);
+    transfer_total = +$2;
+    transfer_total_currency = $3;
+    transfer_fee = +$4;
+    transfer_fee_currency = $5;
+    transfer_payment_method = $6;
+    transfer_id = $7;
+    order_price = $8;
+    order_currency = $9;
+    order_btc = $10;
+    order_tracking_code = $11;
+    order_paid_out = $12;
+    coinbase_id = $13;
+    bitcoin_hash = $14;
 
-	# Detect buy/sell
-	if (match(notes, /^(Sold|Bought) [0-9.,]* BTC for( for)? \$/)) {
-		t = substr(notes, RSTART + RLENGTH);
-		match(t, /[0-9,]*(\.[0-9]*)?/);
-		transfer_total = substr(t, 1, RLENGTH);
-		transfer_total_currency = "USD";
+    # Detect buy/sell
+    if (match(notes, /^(Sold|Bought) [0-9.,]* BTC for( for)? \$/)) {
+        t = substr(notes, RSTART + RLENGTH);
+        match(t, /[0-9,]*(\.[0-9]*)?/);
+        transfer_total = substr(t, 1, RLENGTH);
+        transfer_total_currency = "USD";
 
-		set_buy_sell_note();
+        set_buy_sell_note();
 
-		# Detect bank, new style
-		match(t, /(Payment will be sen?t to|Paid for with) /);
-		source = substr(t, RSTART + RLENGTH);
-		match(source, /[-*]/);
-		bank = substr(source, 1, RSTART - 2);
-		account = "Assets:Bank:" bank;
-	}
+        # Detect bank, new style
+        match(t, /(Payment will be sen?t to|Paid for with) /);
+        source = substr(t, RSTART + RLENGTH);
+        match(source, /[-*]/);
+        bank = substr(source, 1, RSTART - 2);
+        account = "Assets:Bank:" bank;
+    }
 
-	print_entry();
+    print_entry();
 }

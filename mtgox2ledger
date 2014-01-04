@@ -23,55 +23,55 @@ $| = 1;
 # Make sure the arguments are the right ones
 my ($btc_file, $usd_file) = @ARGV;
 if ($btc_file !~ /btc/i or $btc_file =~ /usd/i or
-	$usd_file !~ /usd/i or $usd_file =~ /btc/i) {
-	print STDERR "Is $btc_file the BTC history and $usd_file the USD history?\n";
-	my $input = <STDIN>;
-	defined $input and $input =~ /^y/ or exit 1;
+    $usd_file !~ /usd/i or $usd_file =~ /btc/i) {
+    print STDERR "Is $btc_file the BTC history and $usd_file the USD history?\n";
+    my $input = <STDIN>;
+    defined $input and $input =~ /^y/ or exit 1;
 }
 
 sub read_entry {
-	my $fd = shift;
-	my $prev_line = shift // '';
-	my $line = <$fd>;
-	return unless defined $line;
-	$line = $prev_line . $line;
-	my ($index, $date, $type, $info, $value, $balance) =
-		map { s/^"(.*)"$/$1/; $_ } split ',', $line;
+    my $fd = shift;
+    my $prev_line = shift // '';
+    my $line = <$fd>;
+    return unless defined $line;
+    $line = $prev_line . $line;
+    my ($index, $date, $type, $info, $value, $balance) =
+        map { s/^"(.*)"$/$1/; $_ } split ',', $line;
 
-	# retry if caught a header
-	if ($index eq 'Index') {
-		return read_entry($fd)
-	}
+    # retry if caught a header
+    if ($index eq 'Index') {
+        return read_entry($fd)
+    }
 
-	# combine multiple lines as theyare sometimes broken
-	if (!defined $value) {
-		return read_entry($fd, $line);
-	}
+    # combine multiple lines as theyare sometimes broken
+    if (!defined $value) {
+        return read_entry($fd, $line);
+    }
 
-	$date = Time::Piece->strptime($date, $dateformat);
-	my $date_str = $date->ymd('/');
+    $date = Time::Piece->strptime($date, $dateformat);
+    my $date_str = $date->ymd('/');
 
-	my $address;
-	my ($short_info, $tid) = $info =~ /^(.*): \[tid:(.*?)\]/;
-	if (!$tid) {
-		$address = $info;
-		$tid = '';
-	}
-	if ($type eq 'spent' or $type eq 'out' or
-		$type eq 'fee' or $type eq 'withdraw') {
-		$value *= -1;
-	}
+    my $address;
+    my ($short_info, $tid) = $info =~ /^(.*): \[tid:(.*?)\]/;
+    if (!$tid) {
+        $address = $info;
+        $tid = '';
+    }
+    if ($type eq 'spent' or $type eq 'out' or
+        $type eq 'fee' or $type eq 'withdraw') {
+        $value *= -1;
+    }
 
-	return {
-		index => $index,
-		type => $type,
-		date => $date,
-		date_str => $date_str,
-		tid => $tid,
-		value => $value,
-		address => $address,
-		info => $short_info,
-	};
+    return {
+        index => $index,
+        type => $type,
+        date => $date,
+        date_str => $date_str,
+        tid => $tid,
+        value => $value,
+        address => $address,
+        info => $short_info,
+    };
 }
 
 open BTC, '<', $btc_file or die("Unable to open BTC file: $!");
@@ -80,19 +80,19 @@ open USD, '<', $usd_file or die("Unable to open USD file: $!");
 my ($btc_entry, $usd_entry);
 
 sub get_next_entry {
-	if (!eof USD and (!defined $usd_entry or
-			(defined $btc_entry and
-				$btc_entry->{date} > $usd_entry->{date}))) {
+    if (!eof USD and (!defined $usd_entry or
+            (defined $btc_entry and
+                $btc_entry->{date} > $usd_entry->{date}))) {
 
-		$usd_entry = read_entry \*USD;
-		$usd_entry->{currency} = 'USD';
-		return $usd_entry;
+        $usd_entry = read_entry \*USD;
+        $usd_entry->{currency} = 'USD';
+        return $usd_entry;
 
-	} elsif (!eof BTC) {
-		$btc_entry = read_entry \*BTC;
-		$btc_entry->{currency} = 'BTC';
-		return $btc_entry;
-	}
+    } elsif (!eof BTC) {
+        $btc_entry = read_entry \*BTC;
+        $btc_entry->{currency} = 'BTC';
+        return $btc_entry;
+    }
 }
 
 # Buffer for entries
@@ -100,145 +100,145 @@ my @buffer;
 
 # Does an entry match a tid and type
 sub entry_matches {
-	my ($entry, $tid, $type_n) = @_;
-	my $type = $entry->{type};
-	return ($entry->{tid} eq $tid) &&
-		($type_n > 0 ? ($type eq 'in' or $type eq 'earned') :
-		$type_n == 0 ? ($type eq 'out' or $type eq 'spent') :
-		$type_n < 0 ? ($type eq 'fee') : 0);
+    my ($entry, $tid, $type_n) = @_;
+    my $type = $entry->{type};
+    return ($entry->{tid} eq $tid) &&
+        ($type_n > 0 ? ($type eq 'in' or $type eq 'earned') :
+        $type_n == 0 ? ($type eq 'out' or $type eq 'spent') :
+        $type_n < 0 ? ($type eq 'fee') : 0);
 }
 
 # Get the next entry, optionally of a specific tid and type, with buffering
 sub get_buffered_entry {
-	my ($tid, $type) = @_;
-	if (!defined $tid) {
-		# get any next entry
-		return shift(@buffer) // get_next_entry();
-	}
+    my ($tid, $type) = @_;
+    if (!defined $tid) {
+        # get any next entry
+        return shift(@buffer) // get_next_entry();
+    }
 
-	# find a particular kind of entry
-	# buffering non-matching ones
-	my ($matching, $entry);
-	for my $entry (@buffer) {
-		if (entry_matches($entry, $tid, $type)) {
-			$matching = $entry;
-			last;
-		}
-	}
-	if ($matching) {
-		# remove matching entry from buffer
-		@buffer = grep { $_ != $matching } @buffer;
-		return $matching;
-	}
+    # find a particular kind of entry
+    # buffering non-matching ones
+    my ($matching, $entry);
+    for my $entry (@buffer) {
+        if (entry_matches($entry, $tid, $type)) {
+            $matching = $entry;
+            last;
+        }
+    }
+    if ($matching) {
+        # remove matching entry from buffer
+        @buffer = grep { $_ != $matching } @buffer;
+        return $matching;
+    }
 
-	do {
-		$entry = get_next_entry();
-		if ($entry and !entry_matches($entry, $tid, $type)) {
-			push @buffer, $entry;
-		} else {
-			return $entry;
-		}
-	} while (defined $entry);
+    do {
+        $entry = get_next_entry();
+        if ($entry and !entry_matches($entry, $tid, $type)) {
+            push @buffer, $entry;
+        } else {
+            return $entry;
+        }
+    } while (defined $entry);
 
-	return $entry;
+    return $entry;
 }
 
 sub format_money {
-	my ($amount, $currency) = @_;
-	if ($currency eq 'USD') {
-		return sprintf("\$%f", $amount);
-	} else {
-		return sprintf("%f ", $amount) . $currency;
-	}
+    my ($amount, $currency) = @_;
+    if ($currency eq 'USD') {
+        return sprintf("\$%f", $amount);
+    } else {
+        return sprintf("%f ", $amount) . $currency;
+    }
 }
 
 # Print a sale transaction consisting of input, output, and fee
 sub print_sale {
-	my ($in, $out, $fee) = @_;
-	my $fee_amount = -$fee->{value} if $fee;
-	my $in_amount = $in->{value};
-	my $out_amount = $out->{value};
-	if (!$fee) {
-	} elsif ($in->{currency} eq $fee->{currency}) {
-		$in_amount -= $fee_amount;
-	} else {
-		$out_amount -= $fee_amount;
-	}
-	printf "%s %s\n", $in->{date_str}, $in->{info};
-	printf "    %-20s  %s\n", $broker_account, format_money($in_amount, $in->{currency});
-	printf "    %-20s  %s\n", $broker_account, format_money($out_amount, $out->{currency});
-	printf "    %-20s  %s\n", $fee_account, format_money($fee_amount, $fee->{currency}) if ($fee);
-	print "\n";
+    my ($in, $out, $fee) = @_;
+    my $fee_amount = -$fee->{value} if $fee;
+    my $in_amount = $in->{value};
+    my $out_amount = $out->{value};
+    if (!$fee) {
+    } elsif ($in->{currency} eq $fee->{currency}) {
+        $in_amount -= $fee_amount;
+    } else {
+        $out_amount -= $fee_amount;
+    }
+    printf "%s %s\n", $in->{date_str}, $in->{info};
+    printf "    %-20s  %s\n", $broker_account, format_money($in_amount, $in->{currency});
+    printf "    %-20s  %s\n", $broker_account, format_money($out_amount, $out->{currency});
+    printf "    %-20s  %s\n", $fee_account, format_money($fee_amount, $fee->{currency}) if ($fee);
+    print "\n";
 }
 
 # Print a single transaction
 sub print_entry {
-	my $entry = shift;
-	return unless $entry;
+    my $entry = shift;
+    return unless $entry;
 
-	my $type = $entry->{type};
-	my $currency = $entry->{currency};
-	my $account;
-	my $description;
+    my $type = $entry->{type};
+    my $currency = $entry->{currency};
+    my $account;
+    my $description;
 
-	if ($currency eq 'USD') {
-		$account = $btc_account;
-		if ($type eq 'in' or $type eq 'deposit') {
-			$description = 'Deposit';
-		} elsif ($type eq 'out' or $type eq 'withdraw') {
-			$description = 'Withdraw';
-		} elsif ($type eq 'fee') {
-			$description = 'Fee';
-			$account = $fee_account;
-		} else {
-			die("Unknown USD transaction type $type tid $entry->{tid}");
-		}
+    if ($currency eq 'USD') {
+        $account = $btc_account;
+        if ($type eq 'in' or $type eq 'deposit') {
+            $description = 'Deposit';
+        } elsif ($type eq 'out' or $type eq 'withdraw') {
+            $description = 'Withdraw';
+        } elsif ($type eq 'fee') {
+            $description = 'Fee';
+            $account = $fee_account;
+        } else {
+            die("Unknown USD transaction type $type tid $entry->{tid}");
+        }
 
-	} elsif ($currency eq 'BTC') {
-		$account = $usd_account;
-		my $address;
-		if ($type eq 'in' or $type eq 'deposit') {
-			$description = 'Deposit';
-		} elsif ($type eq 'out' or $type eq 'withdraw') {
-			$description = 'Withdraw';
-		} elsif ($type eq 'fee') {
-			$description = 'Fee';
-			$account = $fee_account;
-		} else {
-			die('Unknown BTC transaction type');
-		}
-	}
+    } elsif ($currency eq 'BTC') {
+        $account = $usd_account;
+        my $address;
+        if ($type eq 'in' or $type eq 'deposit') {
+            $description = 'Deposit';
+        } elsif ($type eq 'out' or $type eq 'withdraw') {
+            $description = 'Withdraw';
+        } elsif ($type eq 'fee') {
+            $description = 'Fee';
+            $account = $fee_account;
+        } else {
+            die('Unknown BTC transaction type');
+        }
+    }
 
-	printf "%s %s\n", $entry->{date_str}, $description;
-	printf "    %-20s  %s\n", $broker_account, format_money($entry->{value}, $currency);
-	printf "    %s\n\n", $other_account;
+    printf "%s %s\n", $entry->{date_str}, $description;
+    printf "    %-20s  %s\n", $broker_account, format_money($entry->{value}, $currency);
+    printf "    %s\n\n", $other_account;
 }
 
 # Process the entries
 while (my $entry = get_buffered_entry()) {
-	my $type = $entry->{type};
+    my $type = $entry->{type};
 
-	if (my $tid = $entry->{tid}) {
-		# if it has a tid, look for a set of three entries:
-		# BTC bought: in, fee, spent
-		# BTC sold: earned, fee, out
+    if (my $tid = $entry->{tid}) {
+        # if it has a tid, look for a set of three entries:
+        # BTC bought: in, fee, spent
+        # BTC sold: earned, fee, out
 
-		my $in_entry = ($type eq 'in' or $type eq 'earned') ?
-			$entry : get_buffered_entry($tid, 1, $entry->{date});
-		my $out_entry = ($type eq 'out' or $type eq 'spent') ?
-			$entry : get_buffered_entry($tid, 0, $entry->{date});
-		my $fee_entry = ($type eq 'fee') ?
-			$entry : get_buffered_entry($tid, -1, $entry->{date});
+        my $in_entry = ($type eq 'in' or $type eq 'earned') ?
+            $entry : get_buffered_entry($tid, 1, $entry->{date});
+        my $out_entry = ($type eq 'out' or $type eq 'spent') ?
+            $entry : get_buffered_entry($tid, 0, $entry->{date});
+        my $fee_entry = ($type eq 'fee') ?
+            $entry : get_buffered_entry($tid, -1, $entry->{date});
 
-		if ($in_entry and $out_entry) {
-			# Render the transaction
-			print_sale($in_entry, $out_entry, $fee_entry);
-		} else {
-			die("Unknown tid");
-		}
+        if ($in_entry and $out_entry) {
+            # Render the transaction
+            print_sale($in_entry, $out_entry, $fee_entry);
+        } else {
+            die("Unknown tid");
+        }
 
-	} else {
-		print_entry($entry);
-	}
+    } else {
+        print_entry($entry);
+    }
 }
 
