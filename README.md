@@ -61,22 +61,23 @@ TODO
 #### Coinbase
 
 Two scripts are provided for processing two types of CSV files that Coinbase
-exports. For best results, run both and compare the results.
+exports. For best results, run both, merge the results, and then reconcile it
+with the online transaction history.
 
 * `coinbase2ledger-transactions`
 
 Import transactions (`Coinbase-Transactions-Export...csv`). This contains every
 buy, sell, send and receive in the account, but the fee amounts for the buy and
-sell transactions is not always provided.
+sell transactions is not always provided, and the BTC amount for buy and sell
+transactions is not always accurate. The bitcoin transaction IDs are usually
+included.
 
 * `coinbase2ledger-transfers`
 
 Import transfers/trades (`Coinbase-Transfers-Export...csv`)
 
-This one has full fee details for each buy/sell transfer, but does not include
-other transactions sent and received from the account.
-
-Import Coinbase transaction history.
+This one has full fee details and exact BTC amounts for each buy/sell transfer,
+but does not include other transactions sent and received from the account.
 
 More scripts
 ------------
