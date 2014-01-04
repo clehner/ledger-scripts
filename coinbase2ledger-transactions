@@ -37,6 +37,9 @@ function set_buy_sell_note() {
 function print_entry() {
 	description = notes;
 
+	if (bitcoin_hash) {
+		printf "; %s\n", bitcoin_hash;
+	}
 	printf "%s %s\n", date, notes;
 	printf "    %-32s  %12s BTC\n", assets_account, btc_amount;
 
