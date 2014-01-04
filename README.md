@@ -49,9 +49,6 @@ Import transaction history from an Electrum wallet.
 
 Reads a CSV file exported from Electrum.
 
-#### `coinbase2ledger`
-Import transactions from Coinbase CSV.
-
 #### `blockchain2ledger`
 Import transactions from a blockchain.info export.
 
@@ -60,6 +57,26 @@ TODO
 
 #### `campbx2ledger`
 TODO
+
+#### Coinbase
+
+Two scripts are provided for processing two types of CSV files that Coinbase
+exports.
+
+* `coinbase2ledger-transactions`
+
+Import transactions (`Coinbase-Transactions-Export...csv`). This contains every
+buy, sell, send and receive in the account, but the fee amounts for the buy and
+sell transactions is not always provided.
+
+* `coinbase2ledger-transfers`
+
+Import transfers/trades (`Coinbase-Transfers-Export...csv`)
+
+This one has full fee details for each buy/sell transfer, but does not include
+other transactions sent and received from the account.
+
+Import Coinbase transaction history.
 
 More scripts
 ------------
