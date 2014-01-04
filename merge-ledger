@@ -9,11 +9,12 @@ $| = 1;
 
 my @files;
 my @buffer;
-my $buffer_size = 10;
+my $buffer_size = 100;
+
+# acceptable time difference to consider transactions matching
+my $time_difference = 7 * ONE_DAY;
 
 my $dateformat = "%Y/%m/%d";
-# acceptable time difference to consider transactions matching
-my $time_difference = 5 * ONE_DAY;
 
 if ($#ARGV == -1) {
     print STDERR "Usage: $0 [-o merged-journal.ledger] [journal.ledger]...\n";
@@ -79,8 +80,9 @@ sub read_entry {
         push @$lines, $line;
         return $entry if $line =~ /^$/;
         # Record item amounts
-        if ($line =~ /^\s*[^;].*\s+([^@ ]*? ?[^ ]?[0-9.,-]+[^@]*?)\s+(?:;.*)?$/) {
-            $amounts->{$1} = 1;
+        if ($line =~ /^\s*[^;].*?(?:\s\s|\t)\s*[^@ ]*? ?[^ 0-9]?-?([0-9.,]+)0*[^@]*?\s+(?:;.*|@.*)?$/) {
+			#    Account                   35.0 BTC @ $15.19
+            $amounts->{+$1} = 1;
         }
     }
 
@@ -91,33 +93,42 @@ sub print_entry {
     my ($stream, $entry) = @_;
     #$stream //= \*STDOUT;
     #print $stream "fh: ".($entry->{fh} // 'null').". i: ".$entry->{buffer_i}."\n";
+	print "amounts: ";
+	print $_ . ", " for keys($entry->{amounts});
+	print "\n";
     print $stream $_ for @{ $entry->{lines} };
 }
 
-sub pick_oldest_entry {
-    my @defined_entries = grep { defined $_ } @buffer;
-    return unless scalar @defined_entries;
-    my $oldest = shift @defined_entries;
-    for my $entry (@defined_entries) {
-        if (abs($entry->{date} - $oldest->{date}) < $time_difference) {
+sub get_oldest_entry {
+    return unless scalar @buffer;
+
+	# pick the oldest entry
+    my $oldest = shift @buffer;
+    for my $entry (@buffer) {
+        if ($entry->{date} < $oldest->{date}) {
             $oldest = $entry;
         }
     }
+
     return $oldest;
 }
 
 sub entry_matches_date {
     my ($entry, $date) = @_;
-    #print($date, $entry->{date}, "\n");
-    return ($date eq $entry->{date});
+	my $diff = $date - $entry->{date};
+    printf("%s, %s: %s days\n", $date, $entry->{date}, $diff);
+	return (abs(int($diff->days)) < $time_difference);
 }
 
 sub entry_matches_amounts {
     my ($entry, $amounts) = @_;
-    for my $amt (keys $entry->{amounts}) {
-        return 1 if $amounts->{$amt};
+	# require at least half of the amounts from entry to be present in amounts
+	my @amounts2 = keys $entry->{amounts};
+	my $matched = 0;
+    for my $amt (@amounts2) {
+        $matched++ if $amounts->{$amt};
     }
-    return 0;
+    return ($matched / scalar @amounts2) >= 0.5;
 }
 
 sub find_matching_entries {
@@ -128,10 +139,11 @@ sub find_matching_entries {
     my @matches = grep {
         defined $_ and
         $fh != $_->{fh} and
-        entry_matches_date($_, $date) and
+		#entry_matches_date($_, $date) and
         entry_matches_amounts($_, $amounts)
     } @buffer;
-    unshift @matches, $entry if (scalar @matches);
+	# append original entry
+	unshift @matches, $entry if (scalar @matches);
     return @matches;
 }
 
@@ -182,15 +194,15 @@ sub merge_entries {
 
 sub replace_entry {
     my $entry = shift;
-    # Read a new entry and add it to the buffer,
-    # replacing the old entry
-    my $i = $entry->{buffer_i};
+	return unless $entry;
+
+	# remove this entry from the buffer
+	@buffer = grep { $_ != $entry } @buffer;
+
+    # Read a new entry and add it to the buffer
     my $fh = $entry->{fh};
     if (my $new_entry = read_entry $fh) {
-        $buffer[$i] = $new_entry;
-        $new_entry->{buffer_i} = $i;
-    } else {
-        undef $buffer[$i];
+		push @buffer, $new_entry;
     }
 }
 
@@ -206,15 +218,12 @@ for my $fh (@files) {
         my $entry = read_entry($fh);
         last unless $entry;
         push @buffer, $entry;
-        $entry->{buffer_i} = $#buffer;
     }
 }
 
 # While the buffers contain entries,
-# pick the oldest entry
-while (my $entry = pick_oldest_entry) {
-    # Remove this entry and read another
-    replace_entry $entry;
+# pop the oldest entry
+while (my $entry = get_oldest_entry) {
     # Look for entries matching this one
     if (my @matching_entries = find_matching_entries $entry) {
         # Present merge choices,
@@ -227,6 +236,9 @@ while (my $entry = pick_oldest_entry) {
             # user kept the entries seperate.
             # Print the single entry and leave the others in their buffers
             print_entry \*OUTFILE, $entry;
+
+			# replace this entry in the buffer with a new one
+			replace_entry($entry);
         }
     } else {
         # No matching entries.
@@ -234,5 +246,3 @@ while (my $entry = pick_oldest_entry) {
         print_entry \*OUTFILE, $entry;
     }
 }
-
-# Read entries from the journals
