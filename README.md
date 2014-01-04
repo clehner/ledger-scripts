@@ -107,6 +107,8 @@ Handles:
 Merge multiple ledger journals into one, in roughly time order. It prompts you to
 merge transactions between journals that might be the same.
 
+*Not completely working*
+
 Similar projects
 ----------------
 
