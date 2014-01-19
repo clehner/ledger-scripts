@@ -36,6 +36,7 @@ BEGIN {
         fee = 0;
     }
 
+    printf "; %s\n", transaction_hash;
     printf "%s %s\n", date, label;
     printf "    %-32s  %12.8f BTC\n", assets_account, value;
     if (value < 0) {
