@@ -51,7 +51,7 @@ BEGIN {
 
     } else if (type == "escrow") {
         description = "Escrow";
-        account = "Income";
+        account = assets_account;
 
     } else if (type == "deposit") {
         description = "Deposit";
