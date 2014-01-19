@@ -53,7 +53,7 @@ Reads a CSV file exported from Electrum.
 Import transactions from a blockchain.info export.
 
 #### `havelock2ledger`
-TODO
+Import transactions from a Havelock Investments account.
 
 #### `campbx2ledger`
 TODO

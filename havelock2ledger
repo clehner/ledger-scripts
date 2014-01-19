@@ -1,0 +1,117 @@
+#!/usr/bin/awk -f
+#
+# havelock2ledger
+# Render transactions from Havelock CSV into ledger format
+#
+# Usage:
+#   ./havelock2ledger transactions.csv
+# or, to get transactions in the date ascending order:
+#   tac transactions.csv | ./havelock2ledger
+
+BEGIN {
+    FS=",";
+    assets_account="Assets:Broker:Havelock";
+    fee_account="Expenses:Broker:Havelock";
+}
+
+# Skip header
+/^Date/ { next; }
+
+# Read transaction
+{
+    time = $1;
+    type = $2;
+    quantity = $3;
+    price = $4;
+    symbol = $5;
+    amount = $6;
+    balance = $7;
+
+    date = substr(time, 1, 10);
+    gsub("-", "/", date);
+
+    # Some types don't include quantity and price
+    if (! balance) {
+        symbol = $3;
+        amount = $4;
+        balance = $5;
+    }
+
+    asset = "";
+    account = assets_account;
+    if (type == "dividend") {
+        description = symbol " Dividend";
+        account = "Income:Dividends";
+
+    } else if (type == "buyipo") {
+        description = "Buy " symbol " (IPO)";
+        asset = quantity " " symbol " @ " price " BTC";
+        amount = "-" amount;
+        account = "";
+
+    } else if (type == "escrow") {
+        description = "Escrow";
+        account = "Income";
+
+    } else if (type == "deposit") {
+        description = "Deposit";
+        account = "Income";
+
+    } else if (type == "withdraw") {
+        description = "Withdraw";
+        account = "Expenses";
+
+    } else if (type == "buy") {
+        description = "Buy " symbol;
+        asset = quantity " " symbol " @ " price " BTC";
+        amount = "-" amount;
+        account = "";
+
+    } else if (type == "sell") {
+        description = "Sell " symbol;
+        asset = "-" quantity " " symbol " @ " price " BTC";
+        account = "";
+
+        # get fee, if the csv is reversed and the fee comes after the sell
+        if (getline > 0) {
+            fee_amount = $4;
+        }
+
+    } else if (type == "buyback") {
+        description = "Buyback " symbol;
+        asset = "-" quantity " " symbol " @ " price " BTC";
+
+    } else if (type == "transferin") {
+        description = "Transfer " symbol;
+        asset = quantity " " symbol;
+        account = "Assets";
+        amount = "";
+
+    } else if (type == "fee") {
+        fee_amount = amount;
+        next;
+
+    } else {
+        description = "Unknown";
+    }
+
+    if (fee_amount) {
+        amount = amount - fee_amount;
+    }
+
+    printf "%s %s\n", date, description;
+    if (asset) {
+        printf "    %-32s  %20s\n", assets_account, asset;
+    }
+    if (amount) {
+        printf "    %-32s  %16s BTC\n", assets_account, amount;
+    }
+    if (fee_amount) {
+        printf "    %-32s  %16s BTC\n", fee_account, fee_amount;
+        fee_amount = "";
+    }
+    if (account) {
+        printf "    %s\n", account;
+    }
+    print "";
+}
