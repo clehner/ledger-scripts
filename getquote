@@ -74,6 +74,11 @@ my %cryptotrade_markets = (
     GGB => 'BTC',
 );
 
+my %cryptostocks_markets = (
+    BTCINVEST => 1,
+    GREEN => 1,
+);
+
 if (my $marketid = $coinabul_markets{$symbol}) {
     if (my $market = json_req('http://coinabul.com/api.php')) {
         $price = '$' . $market->{$marketid}->{USD};
@@ -97,6 +102,14 @@ if (!$price and my $currency = $cryptotrade_markets{$symbol}) {
     }
 }
 
+if (!$price and $cryptostocks_markets{$symbol}) {
+    if (my $info = json_req('https://cryptostocks.com/api/get_security_info.json?ticker=' . $symbol)) {
+        if ($info and $info->{return_code} == 0) {
+            $price = $info->{last_price} . ' ' . $info->{currency};
+        }
+    }
+}
+
 if (!$price) {
     if ($symbol eq 'AM') {
         $symbol = 'AM1';
@@ -104,14 +117,6 @@ if (!$price) {
     if (my $ticker = json_req('https://www.havelockinvestments.com/r/ticker')) {
         if (my $details = $ticker->{$symbol}) {
             $price = $details->{last} . ' BTC';
-        }
-    }
-}
-
-if (!$price) {
-    if (my $info = json_req('https://cryptostocks.com/api/get_security_info.json?ticker=' . $symbol)) {
-        if ($info and $info->{return_code} == 0) {
-            $price = $info->{last_price} . ' ' . $info->{currency};
         }
     }
 }
