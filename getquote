@@ -91,7 +91,9 @@ if (!$price and my $currency = $cryptotrade_markets{$symbol}) {
     my $ticker = lc($symbol . '_' . $currency);
     my $resp = json_req('https://crypto-trade.com/api/1/ticker/' . $ticker);
     if ($resp->{status} eq 'success') {
-        $price = $resp->{data}->{last} . ' ' . $currency;
+        my $data = $resp->{data};
+        $price = $data->{last} || ($data->{min_ask} + $data->{max_bid}) / 2;
+        $price .= ' ' . $currency;
     }
 }
 
