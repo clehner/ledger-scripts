@@ -32,7 +32,9 @@ if (!$symbol) {
 }
 
 sub json_req {
-    my $req = HTTP::Request->new('GET', shift);
+    my $url = shift;
+    print STDERR "Looking up $symbol\n";
+    my $req = HTTP::Request->new('GET', $url);
     my $ua = LWP::UserAgent->new(agent => 'perl/' . $^V);
     $ua->timeout($timeout);
     my $res = $ua->request($req);
@@ -122,6 +124,7 @@ if (!$price) {
 }
 
 if (!$price) {
+    print STDERR "Looking up $symbol (NASDAQ)\n";
     my $q = Finance::Quote->new;
     $q->timeout($timeout);
     $q->require_labels(qw/price/);
