@@ -1,0 +1,178 @@
+#!/usr/bin/awk -f
+#
+# campbx2ledger
+# Parse CSV from CampBX into ledger format
+#
+# Usage: tac CampBXActivity.csv | ./campbx2ledger > campbx.ledger
+
+BEGIN {
+    FS = ", ";
+    assets_account = "Assets:Broker:CampBX";
+    commission_account = "Expenses:Broker:CampBX";
+    miner_fee_account = "Expenses:Broker:Miner Fees";
+
+    date = "";
+    commission_amount = 0;
+    usd_value = 0;
+    sell = 0;
+    buy = 0;
+    send_to = 0;
+    fee_value = 0;
+}
+
+# Fix footer
+/^END/ {
+    gsub("END CSV", "", $1);
+}
+
+function trade_type(type) { return $4 == type; }
+function completion_code(code) { return $3 == code; }
+function quantity() { return $6; }
+function price() { return $7; }
+function commission() { return $12; }
+
+function format_date() {
+    executed_on = $1;
+    date = substr(executed_on, 2, 10);
+    gsub("-", "/", date);
+    return date;
+}
+
+function format_money(amount, cur) {
+    if (cur == "$") {
+        return sprintf("$%.2f", amount);
+    } else if (currency = "BTC") {
+        return sprintf("%.8f BTC", amount);
+    }
+}
+
+function print_entry() {
+    printf "%s %s\n", date, description;
+    printf "    %-32s  %16s\n", assets_account, format_money(value, currency);
+    if (fee_value) {
+        printf "    %-32s  %16s\n", miner_fee_account, format_money(fee_value, currency);
+    }
+    printf "    %s\n", account;
+    print "";
+}
+
+function print_sale() {
+    printf "%s %s\n", date, description;
+    printf "    %-32s  %16s\n", assets_account, format_money(value, currency);
+    printf "    %-32s  %16s\n", assets_account, format_money(usd_value, "$");
+    printf "    %-32s  %16s\n", commission_account, format_money(commission_amount, "$");
+    print "";
+}
+
+completion_code("Expired") {
+    next;
+}
+
+# this send is complete
+send_to == 3 || (send_to == 2 && ! trade_type("Bitcoin Deduction")) {
+    currency = "BTC";
+    account = "Expenses";
+    description = "Withdraw";
+    date = send_date;
+    print_entry();
+    send_to = 0;
+    fee_value = 0;
+}
+
+# Skip header
+/^Executed/ { next; }
+
+{
+    date = format_date();
+}
+
+trade_type("USD Deposit") {
+    description = "Deposit";
+    value = quantity();
+    currency = "$";
+    account = "Income";
+    print_entry();
+    next;
+}
+
+trade_type("Quick Sell") {
+    sell = 1;
+    commission_amount = commission();
+    usd_value += quantity() * price() - commission();
+    next;
+}
+
+trade_type("Quick Buy") {
+    buy = 1;
+    commission_amount = commission();
+    usd_value -= quantity() * price() + commission();
+    next;
+}
+
+sell && trade_type("Bitcoin Deduction") {
+    currency = "BTC";
+    value = "-" quantity();
+    description = "Sell BTC";
+    print_sale();
+    usd_value = 0;
+    sell = 0;
+    commission_amount = 0;
+    next;
+}
+
+buy && trade_type("Bitcoin Deposit") {
+    currency = "BTC";
+    value = quantity();
+    description = "Buy BTC";
+    print_sale();
+    usd_value = 0;
+    buy = 0;
+    commission_amount = 0;
+    next;
+}
+
+trade_type("Bitcoin Deposit") {
+    description = "Deposit";
+    currency = "BTC";
+    value = quantity();
+    account = "Income";
+    print_entry();
+    next;
+}
+
+# indicates a withdraw, with possible miner fee
+trade_type("Bitcoin Send-to") {
+    send_to = 1;
+    send_date = date;
+    value = quantity();
+    next;
+}
+
+# miner fee + value as deduction
+send_to == 1 && trade_type("Bitcoin Deduction") {
+    fee_value = quantity() - value;
+    value = "-" quantity();
+    send_to = 2;
+    next;
+}
+
+# miner fee as separate deduction
+send_to == 2 && trade_type("Bitcoin Deduction") {
+    fee_value += quantity();
+    value -= fee_value;
+    send_to = 3;
+    next;
+}
+
+#executed_on = $1;
+#date_entered = $2;
+#completion_code = $3;
+#trade_type = $4;
+#margin = $5;
+#quantity = $6;
+#price = $7;
+#price_type = $8;
+#stop_loss = $9;
+#fill_type = $10;
+#dark_pool = $11;
+#commission = $12;

@@ -56,7 +56,7 @@ Import transactions from a blockchain.info export.
 Import transactions from a Havelock Investments account.
 
 #### `campbx2ledger`
-TODO
+Import transaction history for a CampBX account.
 
 #### Coinbase
 
@@ -68,7 +68,7 @@ with the online transaction history.
 
 Import transactions (`Coinbase-Transactions-Export...csv`). This contains every
 buy, sell, send and receive in the account, but the fee amounts for the buy and
-sell transactions is not always provided, and the BTC amount for buy and sell
+sell transactions are not always provided, and the BTC amount for buy and sell
 transactions is not always accurate. The bitcoin transaction IDs are usually
 included.
 
