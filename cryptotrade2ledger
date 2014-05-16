@@ -1,0 +1,104 @@
+#!/usr/bin/awk -f
+#
+# cryptotrade2ledger
+# Render transactions from Crypto-Trade TSV format to Ledger format
+#
+# Usage:
+#   ./cryptotrade2ledger transactions.csv
+# or, to get transactions in the date ascending order:
+#   tac transactions.csv | ./cryptotrade2ledger
+# or, if you have a program to reverse paragraphs, use that:
+#   ./cryptotrade2ledger transactions.csv | ptac
+
+BEGIN {
+    FS="\t";
+    assets_account="Assets:Broker:Crypto-Trade";
+    fee_account="Expenses:Broker:Crypto-Trade";
+	dividend_account="Income:Dividends";
+	date="";
+	type="";
+}
+
+function fix_date(d) {
+	day = substr(d, 1, 2);
+	month = substr(d, 4, 2);
+	year = "20" substr(d, 7, 2);
+	return year "/" month "/" day;
+}
+
+function start_transaction() {
+	if (match(type, /Dividend/)) {
+		symbol = substr(type, 44);
+		symbol = substr(symbol, 1, index(symbol, " ")-1);
+		description = symbol " Dividend";
+
+	} else if (match(type, /Shares_Received/)) {
+		description = substr(type, 19);
+
+	} else {
+		return;
+	}
+
+    printf "%s %s\n", date, description;
+}
+
+function handle_posting(amount, currency) {
+	if (match(type, /Dividend/)) {
+		account = dividend_account;
+
+	} else if (match(type, /Shares_Received/)) {
+		account = "Equity:Transfer";
+
+	} else {
+		print "Unknown transaction type: " type > "/dev/stderr";
+		return;
+	}
+
+	printf "    %-32s  %16s\n", account, amount " " currency;
+}
+
+function end_transaction() {
+	printf "    %s\n", assets_account;
+    print "";
+}
+
+# Skip header
+/^Transaction/ { next; }
+
+# check if type matches previous type
+# i.e. we are still in the same transaction
+{
+	type_matches = (substr(type, 1, 44) == substr($3, 1, 44));
+}
+
+# get transaction start/end
+!type_matches {
+	if (type) {
+		end_transaction();
+	}
+	type = $3;
+	date = fix_date($2);
+	start_transaction();
+	type_matches = true;
+}
+
+# get transaction end
+END {
+	end_transaction();
+}
+
+# get posting
+{
+    id = $1;
+    amount = $4;
+    currency = $5;
+    status = $6;
+
+	if (substr(amount, 1, 1) == "+") {
+		amount = "-" substr(amount, 2);
+	} else if (substr(amount, 1, 1) == "-") {
+		amount = "+" substr(amount, 2);
+	}
+
+	handle_posting(amount, currency);
+}

@@ -58,6 +58,14 @@ Import transactions from a Havelock Investments account.
 #### `campbx2ledger`
 Import transaction history for a CampBX account.
 
+#### `cryptotrade2ledger`
+Import transaction history for a Crypto-Trade account.
+
+To obtain the TSV data to import, visit the
+[transactions page](https://crypto-trade.com/member/transactions), and for each
+page of results, copy and paste the table into a text file such that each row
+from the table is in its own line, with the values in the cells seperatd by tabs.
+
 #### Coinbase
 
 Two scripts are provided for processing two types of CSV files that Coinbase
