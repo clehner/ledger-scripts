@@ -48,7 +48,7 @@ sub json_req {
     return $content ? decode_json($content) : undef;
 }
 
-if ($symbol eq '$') {
+if ($symbol eq '$' or $symbol eq 'USD') {
     if (my $ticker = json_req('https://api.bitcoinaverage.com/ticker/USD')) {
         $price = sprintf '%.8f BTC', 1/$ticker->{last}
     }
@@ -139,7 +139,7 @@ if (!$price and $rateexchange_markets{$symbol}) {
     }
     if (my $info = json_req('http://rate-exchange.appspot.com/currency?to=USD&from=' . $symbol)) {
         if ($info and $info->{rate}) {
-            $price = $info->{rate} . ' ' . $info->{to};
+            $price = '$' . $info->{rate};
         }
     }
 }
