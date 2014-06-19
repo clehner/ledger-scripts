@@ -82,6 +82,16 @@ my %cryptostocks_markets = (
     GREEN => 1,
 );
 
+my %havelock_markets = (
+    KCIM => 1,
+    AM => 'AM1',
+    HIF => 1,
+    MS => 1,
+    RENT => 1,
+    SFI => 1,
+    VTX => 1
+);
+
 if (my $marketid = $coinabul_markets{$symbol}) {
     if (my $market = json_req('http://coinabul.com/api.php')) {
         $price = '$' . $market->{$marketid}->{USD};
@@ -106,9 +116,9 @@ if (!$price and $cryptostocks_markets{$symbol}) {
     }
 }
 
-if (!$price) {
-    if ($symbol eq 'AM') {
-        $symbol = 'AM1';
+if (!$price and $havelock_markets{$symbol}) {
+    if ($havelock_markets{$symbol} != 1) {
+        $symbol =$havelock_markets{$symbol};
     }
     if (my $ticker = json_req('https://www.havelockinvestments.com/r/ticker')) {
         if (my $details = $ticker->{$symbol}) {
