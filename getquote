@@ -10,7 +10,7 @@
 # Coinabul (Gold, Silver)
 # Havelock Investments
 # Cryptostocks
-# NASDAQ
+# Google Finance
 #
 
 use strict;
@@ -31,7 +31,7 @@ if (!$symbol) {
     exit 1;
 }
 
-sub json_req {
+sub request {
     my $url = shift;
     print STDERR "Looking up $symbol\n";
     my $req = HTTP::Request->new('GET', $url);
@@ -39,9 +39,12 @@ sub json_req {
     $ua->timeout($timeout);
     $ua->ssl_opts(verify_hostname => 0);
     my $res = $ua->request($req);
-    if ($res->is_success) {
-        return decode_json($res->decoded_content);
-    }
+    return $res->is_success ? $res->decoded_content : undef;
+}
+
+sub json_req {
+    my $content = request(shift);
+    return $content ? decode_json($content) : undef;
 }
 
 if ($symbol eq '$') {
@@ -115,13 +118,12 @@ if (!$price) {
 }
 
 if (!$price) {
-    print STDERR "Looking up $symbol (NASDAQ)\n";
-    my $q = Finance::Quote->new;
-    $q->timeout($timeout);
-    $q->require_labels(qw/price/);
-    my %quotes = $q->fetch("nasdaq", $symbol);
-    if ($quotes{$symbol}) {
-        $price = '$' . $quotes{$symbol, "price"};
+    if ($_ = request('http://www.google.com/finance/info?infotype=infoquoteall&q=' . $symbol)) {
+        s/\/\/.*/[/;
+        my $info = decode_json($_);
+        if ($info and $info->[0]) {
+            $price = '$' . $info->[0]->{l};
+        }
     }
 }
 
