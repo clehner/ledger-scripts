@@ -11,6 +11,7 @@
 # Havelock Investments
 # Cryptostocks
 # Google Finance
+# Rate-Exchange
 #
 
 use strict;
@@ -92,6 +93,11 @@ my %havelock_markets = (
     VTX => 1
 );
 
+my %rateexchange_markets = (
+    '€' => 'EUR',
+    EUR => 1
+);
+
 if (my $marketid = $coinabul_markets{$symbol}) {
     if (my $market = json_req('http://coinabul.com/api.php')) {
         $price = '$' . $market->{$marketid}->{USD};
@@ -123,6 +129,17 @@ if (!$price and $havelock_markets{$symbol}) {
     if (my $ticker = json_req('https://www.havelockinvestments.com/r/ticker')) {
         if (my $details = $ticker->{$symbol}) {
             $price = $details->{last} . ' BTC';
+        }
+    }
+}
+
+if (!$price and $rateexchange_markets{$symbol}) {
+    if ($rateexchange_markets{$symbol} != 1) {
+        $symbol = $rateexchange_markets{$symbol};
+    }
+    if (my $info = json_req('http://rate-exchange.appspot.com/currency?to=USD&from=' . $symbol)) {
+        if ($info and $info->{rate}) {
+            $price = $info->{rate} . ' ' . $info->{to};
         }
     }
 }
