@@ -20,6 +20,7 @@ use Finance::Quote;
 use HTTP::Request;
 use LWP::UserAgent;
 use JSON;
+use POSIX qw(strftime);
 
 my $timeout = 60;
 
@@ -135,7 +136,8 @@ if (!$price) {
 }
 
 if ($price) {
-    print $price, "\n";
+    print strftime("%Y/%m/%d %H:%M:%S ", localtime(time())),
+        $symbol, ' ', $price, "\n";
 } else {
     exit 1;
 }
