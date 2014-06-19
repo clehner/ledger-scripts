@@ -8,7 +8,6 @@
 #
 # BitcoinAverage (BTC/USD)
 # Coinabul (Gold, Silver)
-# Cryptsy (altcoins)
 # Havelock Investments
 # Cryptostocks
 # NASDAQ
@@ -57,14 +56,6 @@ if ($symbol eq 'BTC') {
     }
 }
 
-my %cryptsy_markets = (
-    LTC => 3,
-    NMC => 29,
-    PPC => 28,
-    XPM => 63,
-    FTC => 5,
-);
-
 my %coinabul_markets = (
     AU => 'Gold',
     AG => 'Silver',
@@ -76,6 +67,11 @@ my %cryptotrade_markets = (
     ESB => 'BTC',
     ESL => 'LTC',
     GGB => 'BTC',
+    PPC => 'BTC',
+    LTC => 'BTC',
+    NMC => 'BTC',
+    XPM => 'BTC',
+    FTC => 'BTC',
 );
 
 my %cryptostocks_markets = (
@@ -86,13 +82,6 @@ my %cryptostocks_markets = (
 if (my $marketid = $coinabul_markets{$symbol}) {
     if (my $market = json_req('http://coinabul.com/api.php')) {
         $price = '$' . $market->{$marketid}->{USD};
-    }
-}
-
-if (!$price and my $marketid = $cryptsy_markets{$symbol}) {
-    my $market = json_req('http://pubapi.cryptsy.com/api.php?method=singlemarketdata&marketid=' . $marketid);
-    if ($market and $market->{success} == 1) {
-        $price = $market->{return}->{markets}->{$symbol}->{lasttradeprice} . ' BTC';
     }
 }
 
