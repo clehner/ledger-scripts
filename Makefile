@@ -1,4 +1,4 @@
-symlinks = merge-ledger getquote cryptotrade2ledger \
+symlinks = merge-ledger getquote gethistoric cryptotrade2ledger \
 		   dwolla2ledger fidelity2ledger lbcsv2ledger mint2ledger
 
 prefix = /usr/local

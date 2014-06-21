@@ -99,6 +99,10 @@ Covers:
 BTC, altcoins, gold, silver, Havelock Investments, CryptoTrade, CryptoStocks,
 and NASDAQ.
 
+#### gethistoric
+
+Get past quotes for BTC/USD, using BitcoinAverage's API.
+
 #### `claws-filter`
 
 Detect transactions in incoming emails through the Claws Mail client and write

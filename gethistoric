@@ -1,0 +1,24 @@
+#!/bin/bash
+
+HISTORIC_CSV=/tmp/historic-btc.csv
+HISTORIC_URL='https://api.bitcoinaverage.com/history/USD/per_day_all_time_history.csv'
+
+req_date="$1"
+if [[ -z "$req_date" ]]
+then
+	echo "Usage: $0 [yyyy-mm-dd]" >&2
+	exit 1
+fi
+
+req_date="${req_date%% *}"
+
+if [[ ! -e $HISTORIC_CSV ]] && ! curl -s $HISTORIC_URL -o $HISTORIC_CSV
+then
+	echo Failed to download historic quotes >&2
+	exit 1
+fi
+
+line=$(grep $req_date $HISTORIC_CSV)
+line2="${line#*,*,*,}"
+line3="${line2%,*}"
+echo $line3
