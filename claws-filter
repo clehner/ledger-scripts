@@ -22,7 +22,7 @@ sub write_entry {
         or die("Failed to open journal $ledger_file: $! in $ENV{PWD}");
     $date = strftime "%Y/%m/%d", localtime(str2time($date));
     printf LEDGER "\n%s %s", $date, $payee;
-    printf LEDGER "\n    %-36s%s", $account_to, $amount;
+    printf LEDGER "\n    %-32s  %14s", $account_to, $amount;
     printf LEDGER "\n    %s\n", $account_from;
     close LEDGER;
 }
@@ -46,7 +46,7 @@ sub dividend_cryptostocks {
 sub payment_sent_paypal {
     my $body = decode_base64(body());
     if (my ($amount, $payee) = $body =~ /You sent a (?:mobile )?payment for (.*?) USD to (.*?)\./) {
-        write_entry $payee, $amount, "Expenses", "Assets:Broker:Paypal";
+        write_entry $payee, $amount, "Expenses", "Assets:Broker:PayPal";
         mark_as_read();
     }
 }
@@ -104,7 +104,7 @@ payment_sent_dwolla
 
 payment_sent_coinbase $1
     if ($from eq 'contact@coinbase.com' &&
-        $subject =~ /^You just sent (.*?) /);
+        $subject =~ /^You just sent (.*? BTC) /);
 
 if ($from eq 'venmo@venmo.com') {
     payment_venmo $1, $2, -1
