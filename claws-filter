@@ -43,10 +43,30 @@ sub dividend_cryptostocks {
     }
 }
 
-sub payment_sent_paypal {
-    my $body = decode_base64(body());
-    if (my ($amount, $payee) = $body =~ /You sent a (?:mobile )?payment for (.*?) USD to (.*?)\./) {
-        write_entry $payee, $amount, "Expenses", "Assets:Broker:PayPal";
+sub payment_paypal {
+    my $paypal_account = 'Assets:Broker:PayPal';
+    my $body = body();
+    if (header('Content-Transfer-Encoding') eq 'base64') {
+        $body = decode_base64($body);
+    }
+    my $subject = header('Subject');
+    my ($amount, $payee);
+
+    if (($amount, $payee) = $body =~ /You sent a (?:mobile )?payment for (.*?) USD to (.*?)\./) {
+        write_entry $payee, $amount, 'Expenses', $paypal_account;
+        mark_as_read();
+
+    } elsif (($amount, $payee) = $body =~ /Amount:=24(.*?) USD\s*To:(.*?)[\r\n]/) {
+        write_entry $payee, '$'.$amount, 'Expenses', $paypal_account;
+
+        mark_as_read();
+
+    } elsif (($payee, $amount) = $subject =~ /(.*) sent you (.*) USD/) {
+        my $description = $payee;
+        if (my ($note) = $body =~ /[\r\n]Note from .*?:(.*)[\r\n]/) {
+            $description .= "  ; $note";
+        }
+        write_entry $description, $amount, $paypal_account, 'Income';
         mark_as_read();
     }
 }
@@ -70,8 +90,8 @@ sub payment_sent_coinbase {
     mark_as_read();
 }
 
-my $venmo_account = 'Assets:Broker:Venmo';
 sub payment_venmo {
+    my $venmo_account = 'Assets:Broker:Venmo';
     my ($payee, $amount, $type) = @_;
     my ($note) = body() =~ /<!-- note -->\s*<div>\s*<p>(.*?)<\/p>/s;
     my $description = "$payee  ; $note";
@@ -94,9 +114,9 @@ dividend_cryptostocks
     if ($from eq 'customerservice@cryptostocks.com' &
         $subject eq 'Dividend payment received');
 
-payment_sent_paypal
-    if ($from eq 'service@paypal.com' &&
-        $subject eq 'You sent a payment');
+payment_paypal
+    if (($from eq 'service@paypal.com' && $subject =~ /^You sent/) ||
+        ($from eq 'member@paypal.com' && $subject =~ /sent you/));
 
 payment_sent_dwolla
     if ($from eq 'no-reply@dwolla.com' &&
