@@ -14,7 +14,7 @@ sub write_debug {
 }
 
 sub write_entry {
-    my ($payee, $amount, $account_to, $account_from) = @_;
+    my ($payee, $amount, $account_to, $account_from, $amount_from) = @_;
     my $date = header('date');
     my $ledger_file = $ENV{LEDGER_FILE} // "/home/cel/Documents/Finances/journal.ledger";
 
@@ -23,7 +23,11 @@ sub write_entry {
     $date = strftime "%Y/%m/%d", localtime(str2time($date));
     printf LEDGER "\n%s %s", $date, $payee;
     printf LEDGER "\n    %-32s  %14s", $account_to, $amount;
-    printf LEDGER "\n    %s\n", $account_from;
+    if ($amount_from) {
+        printf LEDGER "\n    %-32s  %14s\n", $account_from, $amount_from;
+    } else {
+        printf LEDGER "\n    %s\n", $account_from;
+    }
     close LEDGER;
 }
 
@@ -52,14 +56,24 @@ sub payment_paypal {
     my $subject = header('Subject');
     my ($amount, $payee);
 
-    if (($amount, $payee) = $body =~ /You sent a (?:mobile )?payment for (.*?) USD to (.*?)\./) {
+    if ((($payee) = $subject =~ /(?:Receipt for [Yy]our|You have authorized a) [Pp]ayment to (.*)$/)
+           && (($amount) = $body =~ /Total: =24(.*?) USD/)) {
+        write_entry $payee, '$'.$amount, 'Expenses', $paypal_account;
+
+    } elsif ((($payee) = $subject =~ /Receipt for your donation to (.*)$/)
+           && (($amount) = $body =~ /Total: =24(.*?) USD/)) {
+        write_entry $payee, '$'.$amount, 'Expenses:Donations', $paypal_account;
+
+    } elsif (($amount, $payee) = $body =~ /You sent a (?:mobile )?payment for (.*?) USD to (.*?)\./) {
         write_entry $payee, $amount, 'Expenses', $paypal_account;
-        mark_as_read();
 
     } elsif (($amount, $payee) = $body =~ /Amount:=24(.*?) USD\s*To:(.*?)[\r\n]/) {
         write_entry $payee, '$'.$amount, 'Expenses', $paypal_account;
 
-        mark_as_read();
+    # non-USD
+    } elsif ((my ($to_amount, $payee) = $body =~ /You sent a payment of =..(.*?) to (.*?)\./) &&
+        (($amount) = $body =~ /From=20amount: =24(.*?) USD[\r\n]/)) {
+        write_entry $payee, $to_amount, 'Expenses', $paypal_account, '$-'.$amount;
 
     } elsif (($payee, $amount) = $subject =~ /(.*) sent you (.*) USD/) {
         my $description = $payee;
@@ -67,8 +81,11 @@ sub payment_paypal {
             $description .= "  ; $note";
         }
         write_entry $description, $amount, $paypal_account, 'Income';
-        mark_as_read();
+
+    } else {
+        return;
     }
+    mark_as_read();
 }
 
 sub payment_sent_dwolla {
@@ -115,8 +132,11 @@ dividend_cryptostocks
         $subject eq 'Dividend payment received');
 
 payment_paypal
-    if (($from eq 'service@paypal.com' && $subject =~ /^You sent/) ||
-        ($from eq 'member@paypal.com' && $subject =~ /sent you/));
+    if (($from eq 'member@paypal.com' && $subject =~ /sent you/) ||
+        ($from eq 'service@paypal.com' &&
+         ($subject =~ /^You sent/ ||
+          $subject =~ /^Receipt for/ ||
+          $subject =~ /^You have authorized/)));
 
 payment_sent_dwolla
     if ($from eq 'no-reply@dwolla.com' &&
