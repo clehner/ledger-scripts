@@ -61,28 +61,17 @@ sub getquote {
         }
     }
 
-    if ($symbol eq 'ETH') {
-        if (my $ticker = json_req('https://poloniex.com/public?command=returnTicker')) {
-            return '$' . $ticker->{USDT_ETH}->{last};
-        }
-    }
-
     my %coinabul_markets = (
         AU => 'Gold',
         AG => 'Silver',
     );
 
-    my %cryptotrade_markets = (
-        CTB => 'BTC',
-        CTL => 'LTC',
-        ESB => 'BTC',
-        ESL => 'LTC',
-        GGB => 'BTC',
+    my %poloniex_markets = (
+        ETH => 'USDT',
         PPC => 'BTC',
-        LTC => 'BTC',
-        NMC => 'BTC',
+        LTC => 'USDT',
         XPM => 'BTC',
-        FTC => 'BTC',
+        NMC => 'BTC',
     );
 
     my %cryptostocks_markets = (
@@ -105,20 +94,17 @@ sub getquote {
         EUR => 1
     );
 
-    if (my $marketid = $coinabul_markets{$symbol}) {
-        if (my $market = json_req('http://coinabul.com/api.php')) {
-            return '$' . $market->{$marketid}->{USD};
+    if (my $base = $poloniex_markets{$symbol}) {
+        my $ticker = $base . '_' . $symbol;
+        if (my $market = json_req('https://poloniex.com/public?command=returnTicker')) {
+            my $amount = $market->{$ticker}->{last};
+            return $base eq 'USDT' ? '$' . $amount : $amount . ' ' . $base;
         }
     }
 
-    if (my $currency = $cryptotrade_markets{$symbol}) {
-        my $ticker = lc($symbol . '_' . $currency);
-        my $resp = json_req('https://crypto-trade.com/api/1/ticker/' . $ticker);
-        if ($resp and $resp->{status} eq 'success') {
-            my $data = $resp->{data};
-            my $price = $data->{last} ||
-                ($data->{min_ask} + $data->{max_bid}) / 2;
-            return $price . ' ' . $currency;
+    if (my $marketid = $coinabul_markets{$symbol}) {
+        if (my $market = json_req('http://coinabul.com/api.php')) {
+            return '$' . $market->{$marketid}->{USD};
         }
     }
 

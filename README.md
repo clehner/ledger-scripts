@@ -96,7 +96,7 @@ Get quotes for various stocks, currencies, and commodities.
 
 Covers:
 
-BTC, altcoins, gold, silver, Havelock Investments, CryptoTrade, CryptoStocks,
+BTC, altcoins, gold, silver, Havelock Investments, CryptoStocks,
 and NASDAQ.
 
 #### gethistoric
