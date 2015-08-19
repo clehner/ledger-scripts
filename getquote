@@ -48,119 +48,119 @@ sub json_req {
     return $content ? decode_json($content) : undef;
 }
 
-if ($symbol eq '$' or $symbol eq 'USD') {
-    if (my $ticker = json_req('https://api.bitcoinaverage.com/ticker/USD')) {
-        $price = sprintf '%.8f BTC', 1/$ticker->{last}
-    }
-}
-
-if (!$price and $symbol eq 'BTC') {
-    if (my $ticker = json_req('https://api.bitcoinaverage.com/ticker/USD')) {
-        $price = '$' . $ticker->{last};
-    }
-}
-
-if (!$price and $symbol eq 'ETH') {
-    if (my $ticker = json_req('https://poloniex.com/public?command=returnTicker')) {
-        $price = '$' . $ticker->{USDT_ETH}->{last};
-    }
-}
-
-my %coinabul_markets = (
-    AU => 'Gold',
-    AG => 'Silver',
-);
-
-my %cryptotrade_markets = (
-    CTB => 'BTC',
-    CTL => 'LTC',
-    ESB => 'BTC',
-    ESL => 'LTC',
-    GGB => 'BTC',
-    PPC => 'BTC',
-    LTC => 'BTC',
-    NMC => 'BTC',
-    XPM => 'BTC',
-    FTC => 'BTC',
-);
-
-my %cryptostocks_markets = (
-    BTCINVEST => 1,
-    GREEN => 1,
-);
-
-my %havelock_markets = (
-    KCIM => 1,
-    AM => 'AM1',
-    HIF => 1,
-    MS => 1,
-    RENT => 1,
-    SFI => 1,
-    VTX => 1
-);
-
-my %rateexchange_markets = (
-    '€' => 'EUR',
-    EUR => 1
-);
-
-if (!$price and my $marketid = $coinabul_markets{$symbol}) {
-    if (my $market = json_req('http://coinabul.com/api.php')) {
-        $price = '$' . $market->{$marketid}->{USD};
-    }
-}
-
-if (!$price and my $currency = $cryptotrade_markets{$symbol}) {
-    my $ticker = lc($symbol . '_' . $currency);
-    my $resp = json_req('https://crypto-trade.com/api/1/ticker/' . $ticker);
-    if ($resp and $resp->{status} eq 'success') {
-        my $data = $resp->{data};
-        $price = $data->{last} || ($data->{min_ask} + $data->{max_bid}) / 2;
-        $price .= ' ' . $currency;
-    }
-}
-
-if (!$price and $cryptostocks_markets{$symbol}) {
-    if (my $info = json_req('https://cryptostocks.com/api/get_security_info.json?ticker=' . $symbol)) {
-        if ($info and $info->{return_code} == 0) {
-            $price = $info->{last_price} . ' ' . $info->{currency};
+sub getquote {
+    if ($symbol eq '$' or $symbol eq 'USD') {
+        if (my $ticker = json_req('https://api.bitcoinaverage.com/ticker/USD')) {
+            return sprintf '%.8f BTC', 1/$ticker->{last};
         }
     }
-}
 
-if (!$price and $havelock_markets{$symbol}) {
-    if ($havelock_markets{$symbol} != 1) {
-        $symbol =$havelock_markets{$symbol};
-    }
-    if (my $ticker = json_req('https://www.havelockinvestments.com/r/ticker')) {
-        if (my $details = $ticker->{$symbol}) {
-            $price = $details->{last} . ' BTC';
+    if ($symbol eq 'BTC') {
+        if (my $ticker = json_req('https://api.bitcoinaverage.com/ticker/USD')) {
+            return '$' . $ticker->{last};
         }
     }
-}
 
-if (!$price and $rateexchange_markets{$symbol}) {
-    if ($rateexchange_markets{$symbol} != 1) {
-        $symbol = $rateexchange_markets{$symbol};
-    }
-    if (my $info = json_req('http://rate-exchange.appspot.com/currency?to=USD&from=' . $symbol)) {
-        if ($info and $info->{rate}) {
-            $price = '$' . $info->{rate};
+    if ($symbol eq 'ETH') {
+        if (my $ticker = json_req('https://poloniex.com/public?command=returnTicker')) {
+            return '$' . $ticker->{USDT_ETH}->{last};
         }
     }
-}
 
-if (!$price) {
+    my %coinabul_markets = (
+        AU => 'Gold',
+        AG => 'Silver',
+    );
+
+    my %cryptotrade_markets = (
+        CTB => 'BTC',
+        CTL => 'LTC',
+        ESB => 'BTC',
+        ESL => 'LTC',
+        GGB => 'BTC',
+        PPC => 'BTC',
+        LTC => 'BTC',
+        NMC => 'BTC',
+        XPM => 'BTC',
+        FTC => 'BTC',
+    );
+
+    my %cryptostocks_markets = (
+        BTCINVEST => 1,
+        GREEN => 1,
+    );
+
+    my %havelock_markets = (
+        KCIM => 1,
+        AM => 'AM1',
+        HIF => 1,
+        MS => 1,
+        RENT => 1,
+        SFI => 1,
+        VTX => 1
+    );
+
+    my %rateexchange_markets = (
+        '€' => 'EUR',
+        EUR => 1
+    );
+
+    if (my $marketid = $coinabul_markets{$symbol}) {
+        if (my $market = json_req('http://coinabul.com/api.php')) {
+            return '$' . $market->{$marketid}->{USD};
+        }
+    }
+
+    if (my $currency = $cryptotrade_markets{$symbol}) {
+        my $ticker = lc($symbol . '_' . $currency);
+        my $resp = json_req('https://crypto-trade.com/api/1/ticker/' . $ticker);
+        if ($resp and $resp->{status} eq 'success') {
+            my $data = $resp->{data};
+            return $data->{last} || ($data->{min_ask} + $data->{max_bid}) / 2;
+            $price .= ' ' . $currency;
+        }
+    }
+
+    if ($cryptostocks_markets{$symbol}) {
+        if (my $info = json_req('https://cryptostocks.com/api/get_security_info.json?ticker=' . $symbol)) {
+            if ($info and $info->{return_code} == 0) {
+                return $info->{last_price} . ' ' . $info->{currency};
+            }
+        }
+    }
+
+    if ($havelock_markets{$symbol}) {
+        if ($havelock_markets{$symbol} != 1) {
+            $symbol = $havelock_markets{$symbol};
+        }
+        if (my $ticker = json_req('https://www.havelockinvestments.com/r/ticker')) {
+            if (my $details = $ticker->{$symbol}) {
+                return $details->{last} . ' BTC';
+            }
+        }
+    }
+
+    if ($rateexchange_markets{$symbol}) {
+        if ($rateexchange_markets{$symbol} != 1) {
+            $symbol = $rateexchange_markets{$symbol};
+        }
+        if (my $info = json_req('http://rate-exchange.appspot.com/currency?to=USD&from=' . $symbol)) {
+            if ($info and $info->{rate}) {
+                return '$' . $info->{rate};
+            }
+        }
+    }
+
     if ($_ = request('http://www.google.com/finance/info?infotype=infoquoteall&q=' . $symbol)) {
         s/\/\/.*/[/;
         my $info = decode_json($_);
         if ($info and $info->[0]) {
-            $price = '$' . $info->[0]->{l};
+            return '$' . $info->[0]->{l};
         }
     }
 }
 
-if ($price) {
+if (my $price = getquote()) {
     print strftime("%Y/%m/%d %H:%M:%S ", localtime(time())),
         $symbol, ' ', $price, "\n";
 } else {
