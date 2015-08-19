@@ -54,9 +54,15 @@ if ($symbol eq '$' or $symbol eq 'USD') {
     }
 }
 
-if ($symbol eq 'BTC') {
+if (!$price and $symbol eq 'BTC') {
     if (my $ticker = json_req('https://api.bitcoinaverage.com/ticker/USD')) {
         $price = '$' . $ticker->{last};
+    }
+}
+
+if (!$price and $symbol eq 'ETH') {
+    if (my $ticker = json_req('https://poloniex.com/public?command=returnTicker')) {
+        $price = '$' . $ticker->{USDT_ETH}->{last};
     }
 }
 
@@ -98,7 +104,7 @@ my %rateexchange_markets = (
     EUR => 1
 );
 
-if (my $marketid = $coinabul_markets{$symbol}) {
+if (!$price and my $marketid = $coinabul_markets{$symbol}) {
     if (my $market = json_req('http://coinabul.com/api.php')) {
         $price = '$' . $market->{$marketid}->{USD};
     }
