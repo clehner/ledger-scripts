@@ -26,7 +26,7 @@ Handles commodities/funds properly.
 #### `mint2ledger`
 Import Mint transactions.
 
-Combines transfers between accounts, and allows for abritrary renaming of
+Combines transfers between accounts, and allows for arbitrary renaming of
 transactions.
 
 #### `dwolla2ledger`
