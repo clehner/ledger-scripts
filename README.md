@@ -26,7 +26,7 @@ Handles commodities/funds properly.
 #### `mint2ledger`
 Import Mint transactions.
 
-Combines transfers between accounts, and allows for abritrary renaming of
+Combines transfers between accounts, and allows for arbitrary renaming of
 transactions.
 
 #### `dwolla2ledger`
@@ -64,7 +64,7 @@ Import transaction history for a Crypto-Trade account.
 To obtain the TSV data to import, visit the
 [transactions page](https://crypto-trade.com/member/transactions), and for each
 page of results, copy and paste the table into a text file such that each row
-from the table is in its own line, with the values in the cells seperatd by tabs.
+from the table is in its own line, with the values in the cells separated by tabs.
 
 #### Coinbase
 
