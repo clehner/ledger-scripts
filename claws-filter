@@ -123,6 +123,8 @@ sub payment_venmo {
 my ($from) = extract_addresses(header('from'));
 my ($subject) = header('subject');
 
+exit if (!$from || !$subject);
+
 dividend_havelock
     if ($from =~ /\@havelockinvestments\.com$/ &&
         $subject eq '[Havelock Investments] Dividend Received');
