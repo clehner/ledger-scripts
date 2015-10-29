@@ -1,5 +1,6 @@
 symlinks = merge-ledger getquote gethistoric cryptotrade2ledger \
-		   dwolla2ledger fidelity2ledger lbcsv2ledger mint2ledger
+		   dwolla2ledger fidelity2ledger lbcsv2ledger mint2ledger \
+		   paypal2ledger
 
 prefix = /usr/local
 exec_prefix = $(prefix)

@@ -66,6 +66,10 @@ To obtain the TSV data to import, visit the
 page of results, copy and paste the table into a text file such that each row
 from the table is in its own line, with the values in the cells separated by tabs.
 
+#### `paypal2ledger`
+Import full PayPal CSV transactions history (including shopping carts).
+Currently this script is buggy so the results have to be manually fixed.
+
 #### Coinbase
 
 Two scripts are provided for processing two types of CSV files that Coinbase

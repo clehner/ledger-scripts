@@ -1,0 +1,170 @@
+#!/usr/bin/awk -f
+
+BEGIN {
+	FPAT = "([^,]*)|(\"[^\"]+\")"
+	txid = ""
+	prev_txid = ""
+	receipt_id = ""
+	tx_total = 0
+}
+
+$1 == "Date" { next }
+
+function unquote(str) {
+	if (match(str, /^".*"$/)) {
+		return substr(str, 2, RLENGTH - 2)
+	}
+	return str
+}
+
+function format_money(amount, currency) {
+	amount = sprintf("%0.2f", amount)
+	if(currency == "USD")
+		return "$" amount
+	else
+		return amount " " currency
+}
+
+function format_date(date) {
+# input: m/d/yyyy
+# output: yyyy/m/d
+	len = length(date)
+	year = substr(date, len-3)
+	return year "/" substr(date, 1, len-5)
+}
+
+function start_tx() {
+	payee = unquote($4)
+	payee_after = 0
+	if (tx_payee) {
+		payee2 = payee "  ; " tx_payee
+		if (length(payee2) > 72) {
+			payee_after = 1
+		} else {
+			payee = payee2
+		}
+	}
+	printf "%s %s\n",
+		format_date(unquote($1)), payee
+	if (payee_after) {
+		printf "    ; %s\n", tx_payee
+	}
+}
+
+function finish_tx() {
+	if (!tx_account) {
+		tx_account = "Expenses"
+	}
+
+	if (tx_starting) {
+		tx_total = -amt
+	}
+	if (tx_total) {
+		# extra expenses (e.g. shipping)
+		printf "    %-32s  %16s\n", tx_account,
+			format_money(tx_total, tx_currency)
+
+		# funds external source (e.g. bank account)
+		if (funds_source_amt) {
+			printf "    %-32s  %16s\n", funds_source,
+				format_money(funds_source_amt, currency)
+			tx_total = funds_source_amt
+		} else {
+			tx_total = 0
+		}
+	}
+	# amount paid by paypal balance
+	if (!tx_total) {
+		printf "    %s\n", "Assets:PayPal"
+	}
+
+	tx_total = 0
+	funds_source_amt = 0
+	tx_account = ""
+	tx_payee = ""
+	tx_currency = ""
+}
+
+{
+	prev_txid = txid
+	prev_receipt_id = receipt_id
+	txid = unquote($13)
+}
+
+receipt_id = unquote($31) {
+	receipt_amt = unquote($36)
+}
+
+txid != prev_txid && receipt_id != prev_txid &&
+	 txid != prev_receipt_id &&
+	 (!receipt_id || receipt_id != prev_receipt_id) {
+	finish_tx()
+	printf "\n"
+}
+
+{
+	type = unquote($5)
+	status = unquote($6)
+	#print "TX", txid, "PTX", prev_txid, "R", receipt_id
+	currency = unquote($7)
+	amt = unquote($8)
+	gsub(/,/, "", amt)
+	tx_starting = 0
+}
+
+!tx_payee {
+	tx_payee = unquote($16)
+}
+
+!tx_currency {
+	tx_currency = currency
+}
+
+NR<3 || (txid != prev_txid && receipt_id != prev_txid &&
+	 txid != prev_receipt_id &&
+	 (!receipt_id || receipt_id != prev_receipt_id)) {
+	tx_starting = 1
+	tx_total -= amt ###
+	start_tx()
+}
+
+END {
+	finish_tx()
+}
+
+status != "Completed" {
+	printf "    ; %s %s\n", txid, status
+	#next
+}
+
+type == "Shopping Cart Item" {
+	desc = unquote($16)
+	if (desc && desc != tx_payee) {
+		printf "    ; %s\n", desc
+	}
+
+	printf "    %-32s  %16s\n", "Expenses:Shopping",
+		format_money(amt, currency)
+	amt *= -1
+}
+
+type ~ /Received/ {
+	tx_account = "Income"
+}
+
+type ~ /Withdraw Funds to a Bank Account|Credit to Credit Card/ {
+	tx_account = "Assets:" unquote($4)
+}
+
+{
+	tx_total += amt
+}
+
+type ~ /Donation Sent/ {
+	tx_account = "Expenses:Donations"
+}
+
+type ~ /Add Funds|Charge From Credit Card/ {
+	funds_source = "Assets:" unquote($4)
+	funds_source_amt = -amt
+}
