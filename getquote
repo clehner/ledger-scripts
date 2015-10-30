@@ -94,6 +94,13 @@ sub getquote {
         EUR => 1
     );
 
+    if ($symbol eq 'FAIR') {
+        if (my $market = json_req('https://getfaircoin.net/api/ticker')) {
+            my $amount = $market->{USD}->{last};
+            return '$' . $amount;
+        }
+    }
+
     if (my $base = $poloniex_markets{$symbol}) {
         my $ticker = $base . '_' . $symbol;
         if (my $market = json_req('https://poloniex.com/public?command=returnTicker')) {
