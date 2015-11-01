@@ -5,7 +5,7 @@ A collection of scripts for helping to organize one's finances using
 [ledger](ledger-cli.org),
 with a focus on crypto-currencies.
 
-© 2013 Charles Lehner, [MIT License](http://cel.mit-license.org/)
+© 2013-2015 Charles Lehner, [MIT License](http://cel.mit-license.org/)
 
 Data import scripts
 -------------------
@@ -124,6 +124,11 @@ Merge multiple ledger journals into one, in roughly time order. It prompts you t
 merge transactions between journals that might be the same.
 
 *Not completely working*
+
+#### `ledger-combine`
+
+Merge multiple ledger journals into one, in time order, without detecting
+duplicates.
 
 Similar projects
 ----------------

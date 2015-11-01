@@ -1,0 +1,123 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Time::Piece;
+use Time::Seconds 'ONE_DAY';
+
+$| = 1;
+
+my @files;
+my @buffer;
+
+# acceptable time difference to consider transactions matching
+my $time_difference = 7 * ONE_DAY;
+
+my $dateformat = "%Y/%m/%d";
+
+if ($#ARGV == -1) {
+    print STDERR "Usage: $0 [journal.ledger]...\n";
+    exit 1;
+}
+
+my @in_filenames = @ARGV;
+my $out_filename;
+
+if ($out_filename) {
+    open OUTFILE, '>', $out_filename;
+    OUTFILE->autoflush(1);
+} else {
+    open OUTFILE, '>&STDOUT';
+}
+
+sub read_entry {
+    my $fh = shift;
+    return if !defined $fh or eof $fh;
+
+    my $amounts = {};
+    my $lines = [];
+    my $entry = {
+        lines => $lines,
+        amounts => $amounts,
+        fh => $fh,
+    };
+
+    # Read lines until found entry date
+    while(1) {
+        my $line = <$fh>;
+        unless (defined $line) {
+            # fh is closed
+            return;
+        }
+        push @$lines, $line;
+        if ($line =~ /^([0-9]{4}[\/-][0-9]{1,2}[\/-][0-9]{1,2})/) {
+            # Make the date string lexically comparable
+            $entry->{date} = Time::Piece->strptime($1, $dateformat) or die("$!");
+            last;
+        }
+    }
+
+    # Read until reaching a blank line
+    while(1) {
+        my $line = <$fh>;
+        unless (defined $line) {
+            # fh is closed
+            push @$lines, "\n";
+            return $entry;
+        }
+        push @$lines, $line;
+        return $entry if $line =~ /^$/;
+        # Record item amounts
+        if ($line =~ /^\s*[^;].*?(?:\s\s|\t)\s*[^@ ]*? ?[^ 0-9]?-?([0-9.,]+)0*[^@]*?\s+(?:;.*|@.*)?$/) {
+            #    Account                   35.0 BTC @ $15.19
+            $amounts->{+$1} = 1;
+        }
+    }
+
+    return $entry;
+}
+
+sub print_entry {
+    my ($stream, $entry) = @_;
+    my $date = $entry->{date};
+    print $stream $_ for @{ $entry->{lines} };
+}
+
+sub pop_oldest_entry {
+    return unless scalar @buffer;
+
+    # pick the oldest entry
+    my $oldest = $buffer[0];
+    for my $entry (@buffer[1..$#buffer]) {
+        if ($entry->{date} < $oldest->{date}) {
+            $oldest = $entry;
+        }
+    }
+
+    if ($oldest) {
+        # remove the entry from the buffer
+        @buffer = grep { $_ != $oldest } @buffer;
+        # read a new entry from the same stream and add it to the buffer
+        my $fh = $oldest->{fh};
+        if (my $new_entry = read_entry $fh) {
+            push @buffer, $new_entry;
+        }
+    }
+    
+    return $oldest;
+}
+
+# Open the ledger journals
+for my $filename (@in_filenames) {
+    open my $fh, '<', $filename or die "Unable to open file $filename: $!";
+    push @files, $fh;
+}
+
+# Read first from each journal
+for my $fh (@files) {
+    push @buffer, read_entry($fh);
+}
+
+while (my $entry = pop_oldest_entry) {
+    print_entry \*OUTFILE, $entry;
+}
