@@ -93,7 +93,6 @@ sub print_entry {
     my ($stream, $entry) = @_;
     #$stream //= \*STDOUT;
     #print $stream "fh: ".($entry->{fh} // 'null').". i: ".$entry->{buffer_i}."\n";
-    print "amounts: ";
     print $_ . ", " for keys($entry->{amounts});
     print "\n";
     print $stream $_ for @{ $entry->{lines} };
@@ -103,8 +102,8 @@ sub get_oldest_entry {
     return unless scalar @buffer;
 
     # pick the oldest entry
-    my $oldest = shift @buffer;
-    for my $entry (@buffer) {
+    my $oldest = $buffer[0];
+    for my $entry (@buffer[1..$#buffer]) {
         if ($entry->{date} < $oldest->{date}) {
             $oldest = $entry;
         }
@@ -116,8 +115,8 @@ sub get_oldest_entry {
 sub entry_matches_date {
     my ($entry, $date) = @_;
     my $diff = $date - $entry->{date};
-    printf("%s, %s: %s days\n", $date, $entry->{date}, $diff);
-    return (abs(int($diff->days)) < $time_difference);
+    printf("%s, %s: %s days\n", $date, $entry->{date}, $diff->days);
+    return (abs($diff) < $time_difference);
 }
 
 sub entry_matches_amounts {
@@ -139,7 +138,7 @@ sub find_matching_entries {
     my @matches = grep {
         defined $_ and
         $fh != $_->{fh} and
-        #entry_matches_date($_, $date) and
+        entry_matches_date($_, $date) and
         entry_matches_amounts($_, $amounts)
     } @buffer;
     # append original entry
@@ -242,7 +241,8 @@ while (my $entry = get_oldest_entry) {
         }
     } else {
         # No matching entries.
-        # Print the entry
+        # Print the entry and pick a new one
         print_entry \*OUTFILE, $entry;
+        replace_entry($entry);
     }
 }
