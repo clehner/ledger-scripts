@@ -81,7 +81,7 @@ sub read_entry {
         return $entry if $line =~ /^$/;
         # Record item amounts
         if ($line =~ /^\s*[^;].*?(?:\s\s|\t)\s*[^@ ]*? ?[^ 0-9]?-?([0-9.,]+)0*[^@]*?\s+(?:;.*|@.*)?$/) {
-			#    Account                   35.0 BTC @ $15.19
+            #    Account                   35.0 BTC @ $15.19
             $amounts->{+$1} = 1;
         }
     }
@@ -93,16 +93,16 @@ sub print_entry {
     my ($stream, $entry) = @_;
     #$stream //= \*STDOUT;
     #print $stream "fh: ".($entry->{fh} // 'null').". i: ".$entry->{buffer_i}."\n";
-	print "amounts: ";
-	print $_ . ", " for keys($entry->{amounts});
-	print "\n";
+    print "amounts: ";
+    print $_ . ", " for keys($entry->{amounts});
+    print "\n";
     print $stream $_ for @{ $entry->{lines} };
 }
 
 sub get_oldest_entry {
     return unless scalar @buffer;
 
-	# pick the oldest entry
+    # pick the oldest entry
     my $oldest = shift @buffer;
     for my $entry (@buffer) {
         if ($entry->{date} < $oldest->{date}) {
@@ -115,16 +115,16 @@ sub get_oldest_entry {
 
 sub entry_matches_date {
     my ($entry, $date) = @_;
-	my $diff = $date - $entry->{date};
+    my $diff = $date - $entry->{date};
     printf("%s, %s: %s days\n", $date, $entry->{date}, $diff);
-	return (abs(int($diff->days)) < $time_difference);
+    return (abs(int($diff->days)) < $time_difference);
 }
 
 sub entry_matches_amounts {
     my ($entry, $amounts) = @_;
-	# require at least half of the amounts from entry to be present in amounts
-	my @amounts2 = keys $entry->{amounts};
-	my $matched = 0;
+    # require at least half of the amounts from entry to be present in amounts
+    my @amounts2 = keys $entry->{amounts};
+    my $matched = 0;
     for my $amt (@amounts2) {
         $matched++ if $amounts->{$amt};
     }
@@ -139,11 +139,11 @@ sub find_matching_entries {
     my @matches = grep {
         defined $_ and
         $fh != $_->{fh} and
-		#entry_matches_date($_, $date) and
+        #entry_matches_date($_, $date) and
         entry_matches_amounts($_, $amounts)
     } @buffer;
-	# append original entry
-	unshift @matches, $entry if (scalar @matches);
+    # append original entry
+    unshift @matches, $entry if (scalar @matches);
     return @matches;
 }
 
@@ -194,15 +194,15 @@ sub merge_entries {
 
 sub replace_entry {
     my $entry = shift;
-	return unless $entry;
+    return unless $entry;
 
-	# remove this entry from the buffer
-	@buffer = grep { $_ != $entry } @buffer;
+    # remove this entry from the buffer
+    @buffer = grep { $_ != $entry } @buffer;
 
     # Read a new entry and add it to the buffer
     my $fh = $entry->{fh};
     if (my $new_entry = read_entry $fh) {
-		push @buffer, $new_entry;
+        push @buffer, $new_entry;
     }
 }
 
@@ -237,8 +237,8 @@ while (my $entry = get_oldest_entry) {
             # Print the single entry and leave the others in their buffers
             print_entry \*OUTFILE, $entry;
 
-			# replace this entry in the buffer with a new one
-			replace_entry($entry);
+            # replace this entry in the buffer with a new one
+            replace_entry($entry);
         }
     } else {
         # No matching entries.
