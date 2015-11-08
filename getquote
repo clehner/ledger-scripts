@@ -138,9 +138,9 @@ sub getquote {
         if ($rateexchange_markets{$symbol} != 1) {
             $symbol = $rateexchange_markets{$symbol};
         }
-        if (my $info = json_req('http://rate-exchange.appspot.com/currency?to=USD&from=' . $symbol)) {
-            if ($info and $info->{rate}) {
-                return '$' . $info->{rate};
+        if (my $info = json_req('https://rate-exchange.herokuapp.com/fetchRate?to=USD&from=' . $symbol)) {
+            if ($info and $info->{Rate}) {
+                return '$' . $info->{Rate};
             }
         }
     }
