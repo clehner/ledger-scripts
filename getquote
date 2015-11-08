@@ -91,7 +91,18 @@ sub getquote {
 
     my %rateexchange_markets = (
         '€' => 'EUR',
-        EUR => 1
+        '£' => 'GBP',
+        '¥' => 'JPY',
+        EUR => 1,
+        GBP => 1,
+        JPY => 1,
+        CAD => 1,
+        HKD => 1,
+        MXN => 1,
+        INR => 1,
+        DKK => 1,
+        CNY => 1,
+        RUB => 1,
     );
 
     if ($symbol eq 'FAIR') {
