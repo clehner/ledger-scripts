@@ -103,7 +103,7 @@ Covers:
 BTC, altcoins, gold, silver, Havelock Investments, CryptoStocks,
 NASDAQ, and sovereign currencies.
 
-#### gethistoric
+#### `gethistoric`
 
 Get past quotes for BTC/USD, using BitcoinAverage's API.
 
