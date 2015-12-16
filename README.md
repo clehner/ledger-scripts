@@ -130,6 +130,34 @@ merge transactions between journals that might be the same.
 Merge multiple ledger journals into one, in time order, without detecting
 duplicates.
 
+#### `usd-bonds-interest`
+
+Retrieve accrued interest on US Treasury savings bonds. This script queries the
+[Savings Bond Calculator][sbc] on the TreasuryDirect website and looks up the
+difference in total value of some bonds between two dates. To use the script
+you have to set an environmental variable `BONDS_QUERY` to the query string you
+would submit to the savings bond calculator. To figure out what value to use
+for the query string, do the following:
+
+- Go to the [Savings Bond Calculator][sbc] page
+- Add the bonds using the form
+- Right click somewhere in the form and choose "Inspect Element" to open the
+  web inspector
+- Find the `<form>` element in the web inspector
+- Change the `method` attribute of the `<form>` from `post` to `get`
+- Close the web inspector
+- Submit the form using the View or Save button
+- Get the URL of the resulting page. Copy the query string starting at
+  `Series=` (not including `RedemptionDate=...&`)
+- Set the env var to the copied query string e.g. by executing `export
+  BONDS_QUERY="..."`
+- Now you can run the script, e.g. `ust-bonds-interest 11/2015 12/2015` to get
+  interested accrued between 11/2015 and 12/2015.
+
+[sbc]: http://www.treasurydirect.gov/BC/SBCPrice
+
+*TODO: automate more of this*
+
 Similar projects
 ----------------
 

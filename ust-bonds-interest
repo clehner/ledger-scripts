@@ -1,0 +1,27 @@
+#!/bin/sh
+# ust-bonds-interest - get interest on treasury bonds
+
+get_value() {
+	wget -qO- \
+		"http://www.treasurydirect.gov/BC/SBCPrice?$query&RedemptionDate=$1" |\
+		sed -n '/colspan="6"/!d; n; n; n; n
+			s/.*<td>//; s/<\/td.*//; s/[$,]//g; p'
+}
+
+get_diff() {
+	query="${BONDS_QUERY?BONDS_QUERY env var must be set}"
+	amt1=$(get_value $1)
+	amt2=$(get_value $2)
+	echo \$$(echo $amt2 - $amt1 | bc -l)
+}
+
+usage() {
+	echo Usage: $0 start_date end_date
+	echo Date format: mm/yyyy
+}
+
+case $# in
+	0) usage;;
+	2) get_diff $@;;
+	*) usage >&2; exit 1;;
+esac
