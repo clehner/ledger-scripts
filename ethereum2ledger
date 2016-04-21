@@ -1,0 +1,30 @@
+#!/bin/sh
+addr="${1?missing address}"
+
+acct_gas='Expenses:Broker:Miner Fees'
+acct_eth='Assets:Ethereum'
+eth=1000000000000000000
+
+curl -s "https://api.etherscan.io/api?module=account&action=txlist&address=$addr&sort=asc" |\
+	jq -r '.result[] | .hash + " " + .timeStamp + " " + .from + " " + .to + " " + .value + " " + .gasUsed + " " + .gasPrice | @text' |\
+while read hash time from to value gas_used gas_price; do
+	if [ "$to" = "$addr" ]
+	then
+		type=Deposit
+		acct_from="$acct_eth"
+		acct_to=Income
+	else
+		type=Withdraw
+		acct_from="$acct_eth"
+		acct_to=Expenses
+		value="-$value"
+	fi
+	gas_eth="$(echo "($gas_used * $gas_price)/$eth" | bc -l)"
+	sent_eth="$(echo "-($value)/$eth" | bc -l)"
+	value_eth="$(echo "($value - ($gas_used * $gas_price))/$eth" | bc -l)"
+	date --date=@$time +"%Y/%m/%d $type"
+	echo "    ; txid: $hash"
+	printf "    %-32s  %12.8f ETH\n" "$acct_to" "$sent_eth"
+	printf "    %-32s  %12.8f ETH\n" "$acct_gas" "$gas_eth"
+	printf "    %-32s  %12.8f ETH\n\n" "$acct_from" "$value_eth"
+done

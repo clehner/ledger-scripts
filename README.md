@@ -70,6 +70,10 @@ from the table is in its own line, with the values in the cells separated by tab
 Import full PayPal CSV transactions history (including shopping carts).
 Currently this script is buggy so the results have to be manually fixed.
 
+#### `ethereum2ledger`
+Import Ethereum transaction history for an address, using etherscan.io's API.
+Depends on jq.
+
 #### Coinbase
 
 Two scripts are provided for processing two types of CSV files that Coinbase
