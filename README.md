@@ -3,7 +3,8 @@ ledger-scripts
 
 A collection of scripts for helping to organize one's finances using
 [ledger](ledger-cli.org),
-with a focus on crypto-currencies.
+with a focus on crypto-currencies. They are implemented variously in Shell,
+Awk, and Perl.
 
 © 2013-2016 Charles Lehner, [MIT License](http://cel.mit-license.org/)
 
@@ -177,5 +178,17 @@ Similar projects
     * bitstamp2ledger
 
 * [mint-to-ledger](https://github.com/shiinee/mint-to-ledger) by
-  [shiinee](https://github.com/shiinee/mint-to-ledger)
+  [shiinee](https://github.com/shiinee)
 
+Contributing
+------------
+
+Contributions are very welcome. Here are some possible things to do:
+
+- Fix bugs
+- Increase portability
+- Add more scripts
+- Add more ticker sources for getquote
+- Improve documentation
+- Add man pages
+- Something else
