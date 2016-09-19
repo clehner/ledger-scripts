@@ -5,7 +5,7 @@ A collection of scripts for helping to organize one's finances using
 [ledger](ledger-cli.org),
 with a focus on crypto-currencies.
 
-© 2013-2015 Charles Lehner, [MIT License](http://cel.mit-license.org/)
+© 2013-2016 Charles Lehner, [MIT License](http://cel.mit-license.org/)
 
 Data import scripts
 -------------------
@@ -98,14 +98,19 @@ but does not include other transactions sent and received from the account.
 More scripts
 ------------
 
-#### `getquote`
+#### `getquote.pl`
 
-Get quotes for various stocks, currencies, and commodities.
+Get quotes for various stocks, currencies, and commodities. Written in Perl and depends on some perl modules.
 
 Covers:
 
 BTC, altcoins, gold, silver, Havelock Investments, CryptoStocks,
 NASDAQ, and sovereign currencies.
+
+#### `getquote.sh`
+
+Get quotes for things. Written in POSIX shell. Depends on curl and jq.
+Currently it does not support as many tickers as `getquote.pl` does.
 
 #### `gethistoric`
 
